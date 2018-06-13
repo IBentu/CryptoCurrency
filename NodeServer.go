@@ -8,10 +8,10 @@ import (
 
 // TODO NodeServer doc
 type NodeServer struct {
-	peers     []string
-	address   string
-	mutex     *sync.Mutex
-	dataQueue [][]byte
+	peers       []string
+	address     string
+	mutex       *sync.Mutex
+	dataChannel chan []byte
 }
 
 const (
@@ -23,11 +23,11 @@ func (n *NodeServer) init() {
 	// init from file settings
 }
 
-func (n *NodeServer) firstInit(address string) {
+func (n *NodeServer) firstInit(address string, dataChannel chan []byte) {
 	n.mutex = &sync.Mutex{}
 	n.peers = make([]string, 0) // read from a certain file a few first peers
 	n.address = address
-	n.dataQueue = make([][]byte, 0)
+	n.dataChannel = dataChannel
 	go n.listenForPeers()
 	go n.SyncBlockchain()
 	go n.SyncTransactionPool()
@@ -35,12 +35,10 @@ func (n *NodeServer) firstInit(address string) {
 
 // SyncBlockchain sends a SCM (refer to protocol doc) to all peers repeatedly.
 func (n *NodeServer) SyncBlockchain() {
-
 }
 
 // SyncTransactionPool syncs the transactionpool according to protocol
 func (n *NodeServer) SyncTransactionPool() {
-
 }
 
 // listenForPeers listens to other nodes for UDP connections
@@ -66,7 +64,7 @@ func (n *NodeServer) handlePeer(conn *net.UDPConn) {
 		return
 	}
 	n.addPeer(address)
-	n.dataQueue = append(n.dataQueue, data)
+	n.dataChannel <- data
 }
 
 // addPeer calls doesPeerExist and adds the address to Peers if the address can not be found in there

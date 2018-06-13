@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"sync"
 )
 
 // TODO Node doc
@@ -14,7 +13,7 @@ type Node struct {
 	transactionPool []Transaction
 	server          NodeServer
 	EllipticCurve   elliptic.Curve
-	mutex           *sync.Mutex
+	dataChannel     chan []byte
 }
 
 /*
@@ -28,10 +27,6 @@ func (n *Node) init() {
 //firstInit initiates the Node for the first time saves to settings file
 func (n *Node) firstInit() {
 }
-
-/*
-Blockchain Functions
-*/
 
 //verifyBlock verifies the Block is valid
 func (n *Node) verifyBlock(b Block) bool {
@@ -58,32 +53,32 @@ func (n *Node) checkBalance(key ecdsa.PublicKey) int {
 	return 0
 }
 
-//makeTransaction create a trnsaction adds it to the pool and returns true if transaction is legal,
-//otherwise it returns false
+// makeTransaction create a trnsaction adds it to the pool and returns true if transaction is legal,
+// otherwise it returns false
 func (n *Node) makeTransaction(recipient ecdsa.PublicKey, amount int) bool {
 	return false
 }
 
-/*
-NodeServer Functions
-*/
+// handleSCM handles every SCM
+func (n *Node) handleSCM(hash string, index int) {
+}
+
+// compare SCM compares by Blockchain Sync Protocol (refer to protocol doc):
+// 		returns 0 if scenario 1
+// 		returns 0 if scenario 2.i
+// 		returns 0 if scenario 2.ii.a
+// 		returns -1 if scenario 2.ii.b
+// 		returns 1 if scenario 3.i
+// 		returns -2 if scenario 3.ii
+func (n *Node) compareSCM(hash string, index int) int {
+	return 0
+}
 
 // checks to see if a request is received from the NodeServer
 func (n *Node) sampleDataQ() {
 	for {
-		n.mutex.Lock()
-		if len(n.server.dataQueue) > 0 {
-			var request []byte
-			if len(n.server.dataQueue) > 1 {
-				request = n.server.dataQueue[0]
-				n.server.dataQueue = make([][]byte, 0)
-			} else if len(n.server.dataQueue) == 1 {
-				request = n.server.dataQueue[0]
-				n.server.dataQueue = n.server.dataQueue[1:]
-			}
-			go n.handleRequest(request)
-		}
-		n.mutex.Unlock()
+		data := <-n.dataChannel
+		go n.handleRequest(data)
 	}
 }
 
