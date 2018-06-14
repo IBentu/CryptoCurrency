@@ -74,8 +74,8 @@ func (n *Node) compareSCM(hash string, index int) int {
 	return 0
 }
 
-// checks to see if a request is received from the NodeServer
-func (n *Node) sampleDataQ() {
+// getServerData checks to see if a request is received from the NodeServer
+func (n *Node) getServerData() {
 	for {
 		data := <-n.dataChannel
 		go n.handleRequest(data)
