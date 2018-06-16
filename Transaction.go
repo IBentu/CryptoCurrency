@@ -12,3 +12,11 @@ type Transaction struct {
 	senderSign   string
 	timestamp    int64
 }
+
+func (t *Transaction) toString() string {
+	return pubKeyToString(t.senderKey) + pubKeyToString(t.recipientKey) + string(t.amount) + t.senderSign + string(t.timestamp)
+}
+
+func pubKeyToString(k ecdsa.PublicKey) string {
+	return string(k.X.Bytes()) + string(k.Y.Bytes())
+}
