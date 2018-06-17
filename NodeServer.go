@@ -12,6 +12,7 @@ type NodeServer struct {
 	address     string
 	mutex       *sync.Mutex
 	recvChannel chan []byte
+	sendChannel chan []byte
 }
 
 const (
@@ -23,11 +24,12 @@ func (n *NodeServer) init() {
 	// init from file settings
 }
 
-func (n *NodeServer) firstInit(address string, recvChannel chan []byte) {
+func (n *NodeServer) firstInit(address string, recvChannel, sendChannel chan []byte) {
 	n.mutex = &sync.Mutex{}
 	n.peers = make([]string, 0) // read from a certain file a few first peers
 	n.address = address
 	n.recvChannel = recvChannel
+	n.sendChannel = sendChannel
 	go n.listenForPeers()
 	go n.SyncBlockchain()
 	go n.SyncTransactionPool()

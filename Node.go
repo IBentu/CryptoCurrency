@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"sync"
 	"time"
 )
@@ -14,8 +15,8 @@ type Node struct {
 	blockchain      []Block
 	transactionPool []Transaction
 	server          NodeServer
-	EllipticCurve   elliptic.Curve
 	recvChannel     chan []byte
+	sendChannel     chan []byte
 	mutex           *sync.Mutex
 }
 
@@ -29,6 +30,22 @@ func (n *Node) init() {
 
 //firstInit initiates the Node for the first time saves to settings file
 func (n *Node) firstInit() {
+	// check file
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return
+	}
+	n.privKey = key
+	n.pubKey = key.PublicKey
+	n.mutex = &sync.Mutex{}
+	n.blockchain = make([]Block, 1)
+	n.blockchain[0] = Block{} // read from a file the genesis block
+	n.transactionPool = make([]Transaction, 0)
+	n.recvChannel = make(chan []byte)
+	n.sendChannel = make(chan []byte)
+	IP := ""
+	n.server.firstInit(IP, n.recvChannel, n.sendChannel)
+	// update blockchain + transactionPool
 }
 
 //verifyBlock verifies the Block is valid
@@ -58,7 +75,7 @@ func (n *Node) checkBalance(key ecdsa.PublicKey) int {
 	sum := 0
 	for i := 0; i < len(n.blockchain); i++ {
 		if n.blockchain[i].miner == key {
-			sum += 0 // decide how much money to reward miners
+			sum += 50 // decide how much money to reward miners. for now 50
 		}
 		for j := 0; j < len(n.blockchain[i].transactions); j++ {
 			if n.blockchain[i].transactions[j].senderKey == key {
