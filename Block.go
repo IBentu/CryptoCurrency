@@ -37,5 +37,12 @@ func transactionSliceToString(transactions []Transaction) string {
 
 // verifyPOW verifies if the Proof-of-Work is valid in the block
 func (b *Block) verifyPOW() bool {
-	return false
+	hashBytes := []byte(b.hash)
+	leadingZeros := 8 // leadingZeros is the number of leading zeros required for the POW
+	for i := 0; i < leadingZeros; i++ {
+		if hashBytes[i] != 48 { // 48 is the value of the char '0'
+			return false
+		}
+	}
+	return true
 }
