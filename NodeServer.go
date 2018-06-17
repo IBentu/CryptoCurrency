@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 )
 
@@ -33,6 +34,7 @@ func (n *NodeServer) firstInit(address string, recvChannel, sendChannel chan []b
 	go n.listenForPeers()
 	go n.SyncBlockchain()
 	go n.SyncTransactionPool()
+	go n.sendToPeers()
 }
 
 // SyncBlockchain sends a SCM (refer to protocol doc) to all peers repeatedly.
@@ -66,7 +68,8 @@ func (n *NodeServer) handlePeer(conn *net.UDPConn) {
 		return
 	}
 	n.addPeer(address)
-	n.recvChannel <- data
+	addressBytes := append(append([]byte{}, byte(len(address.String()))), []byte(address.String())...)
+	n.recvChannel <- append(addressBytes, data...)
 }
 
 // addPeer calls doesPeerExist and adds the address to Peers if the address can not be found in there
@@ -97,4 +100,31 @@ func (n *NodeServer) doesPeerExist(address net.Addr) bool {
 // requestPeers requests peers from known nodes according to protocol
 func (n *NodeServer) requestPeers() {
 
+}
+
+// sendToPeers receives data from channel and sends to given address (from data)
+func (n *NodeServer) sendToPeers() {
+	for {
+		sendData := <-n.sendChannel
+		addressBytesLen, err := strconv.Atoi(string(sendData[0]))
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		address := sendData[1:addressBytesLen]
+		addr, err := net.ResolveUDPAddr(networkProtocol, string(address))
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		conn, err := net.DialUDP(networkProtocol, nil, addr)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		_, err = conn.Write(sendData[addressBytesLen:])
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 }
