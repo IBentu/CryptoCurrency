@@ -8,7 +8,7 @@ import (
 	"math/big"
 )
 
-// TODO Transaction doc
+// Transaction is a single transaction and is saved on the blockchain in it
 type Transaction struct {
 	senderKey    ecdsa.PublicKey
 	recipientKey ecdsa.PublicKey

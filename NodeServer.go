@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// TODO NodeServer doc
+// NodeServer is the server of the node and it is responsible for communication between nodes
 type NodeServer struct {
 	peers       []string
 	address     string

@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 )
 
-// TODO Block doc
+// Block is the database for the transaction, blockchain node
 type Block struct {
 	index        int
 	timestamp    int64

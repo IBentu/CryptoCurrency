@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// TODO Node doc
+// Node is the client for miners
 type Node struct {
 	privKey         *ecdsa.PrivateKey
 	pubKey          ecdsa.PublicKey
