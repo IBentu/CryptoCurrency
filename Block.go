@@ -35,7 +35,7 @@ func transactionSliceToString(transactions []Transaction) string {
 	return str
 }
 
-// verifyFiller checks if the block hash is approved by the consensus
-func (b *Block) verifyFiller() bool {
+// verifyPOW verifies if the Proof-of-Work is valid in the block
+func (b *Block) verifyPOW() bool {
 	return false
 }

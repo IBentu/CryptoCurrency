@@ -3,6 +3,8 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"sync"
+	"time"
 )
 
 // TODO Node doc
@@ -13,7 +15,8 @@ type Node struct {
 	transactionPool []Transaction
 	server          NodeServer
 	EllipticCurve   elliptic.Curve
-	dataChannel     chan []byte
+	recvChannel     chan []byte
+	mutex           *sync.Mutex
 }
 
 /*
@@ -30,12 +33,19 @@ func (n *Node) firstInit() {
 
 //verifyBlock verifies the Block is valid
 func (n *Node) verifyBlock(b Block) bool {
-	return false
+	switch {
+	case b.prevHash != n.blockchain[len(n.blockchain)-1].hash:
+		return false
+	case b.verifyPOW():
+		return false
+	default:
+		return true
+	}
 }
 
-// verifyTransaction checks the blockchain if the transaction is legal (enough credits to send), and verifies the senderSign
+// verifyTransaction checks the blockchain if the transaction is legal (enough credits to send), and verifies the transactionSign
 func (n *Node) verifyTransaction(t Transaction) bool {
-	return false
+	return ecdsa.Verify(&t.senderKey, []byte(t.hash), t.signR, t.signS)
 }
 
 // mine creates a block using the TransactionPool
@@ -43,20 +53,44 @@ func (n *Node) mine() Block {
 	return Block{}
 }
 
-// verifyPOW verifies if the Proof-of-Work is valid in a certain block
-func (n *Node) verifyPOW(b Block) bool {
-	return false
-}
-
 // checkBalance goes through the blockchain, checks and returns the balance of a certain PublicKey
 func (n *Node) checkBalance(key ecdsa.PublicKey) int {
-	return 0
+	sum := 0
+	for i := 0; i < len(n.blockchain); i++ {
+		if n.blockchain[i].miner == key {
+			sum += 0 // decide how much money to reward miners
+		}
+		for j := 0; j < len(n.blockchain[i].transactions); j++ {
+			if n.blockchain[i].transactions[j].senderKey == key {
+				sum -= n.blockchain[i].transactions[j].amount
+			} else if n.blockchain[i].transactions[j].recipientKey == key {
+				sum += n.blockchain[i].transactions[j].amount
+			}
+		}
+	}
+	return sum
 }
 
 // makeTransaction create a trnsaction adds it to the pool and returns true if transaction is legal,
 // otherwise it returns false
 func (n *Node) makeTransaction(recipient ecdsa.PublicKey, amount int) bool {
-	return false
+	t := Transaction{}
+	if amount < n.checkBalance(n.pubKey) {
+		return false
+	}
+	t.amount = amount
+	t.recipientKey = recipient
+	t.senderKey = n.pubKey
+	t.timestamp = getCurrentMillis()
+	t.hashTransaction()
+	err := t.sign(n.privKey)
+	if err != nil {
+		return false
+	}
+	n.mutex.Lock()
+	n.transactionPool = append(n.transactionPool, t)
+	n.mutex.Unlock()
+	return true
 }
 
 // handleSCM handles every SCM
@@ -77,11 +111,16 @@ func (n *Node) compareSCM(hash string, index int) int {
 // getServerData checks to see if a request is received from the NodeServer
 func (n *Node) getServerData() {
 	for {
-		data := <-n.dataChannel
+		data := <-n.recvChannel
 		go n.handleRequest(data)
 	}
 }
 
 // handleRequest handles the requests from the dataQueue in the NodeServer
 func (n *Node) handleRequest(request []byte) {
+}
+
+// getCurrentMillis returns the current time in millisecs
+func getCurrentMillis() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
 }

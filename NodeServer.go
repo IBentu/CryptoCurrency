@@ -11,7 +11,7 @@ type NodeServer struct {
 	peers       []string
 	address     string
 	mutex       *sync.Mutex
-	dataChannel chan []byte
+	recvChannel chan []byte
 }
 
 const (
@@ -23,11 +23,11 @@ func (n *NodeServer) init() {
 	// init from file settings
 }
 
-func (n *NodeServer) firstInit(address string, dataChannel chan []byte) {
+func (n *NodeServer) firstInit(address string, recvChannel chan []byte) {
 	n.mutex = &sync.Mutex{}
 	n.peers = make([]string, 0) // read from a certain file a few first peers
 	n.address = address
-	n.dataChannel = dataChannel
+	n.recvChannel = recvChannel
 	go n.listenForPeers()
 	go n.SyncBlockchain()
 	go n.SyncTransactionPool()
@@ -64,7 +64,7 @@ func (n *NodeServer) handlePeer(conn *net.UDPConn) {
 		return
 	}
 	n.addPeer(address)
-	n.dataChannel <- data
+	n.recvChannel <- data
 }
 
 // addPeer calls doesPeerExist and adds the address to Peers if the address can not be found in there
