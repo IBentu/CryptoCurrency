@@ -3,7 +3,8 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rand"
+	crand "crypto/rand"
+	mrand "math/rand"
 	"sync"
 	"time"
 )
@@ -31,7 +32,7 @@ func (n *Node) init() {
 //firstInit initiates the Node for the first time saves to settings file
 func (n *Node) firstInit() {
 	// check file
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	key, err := ecdsa.GenerateKey(elliptic.P256(), crand.Reader)
 	if err != nil {
 		return
 	}
@@ -53,7 +54,7 @@ func (n *Node) verifyBlock(b Block) bool {
 	switch {
 	case b.prevHash != n.blockchain[len(n.blockchain)-1].hash:
 		return false
-	case b.verifyPOW():
+	case !b.verifyPOW():
 		return false
 	default:
 		return true
@@ -62,12 +63,69 @@ func (n *Node) verifyBlock(b Block) bool {
 
 // verifyTransaction checks the blockchain if the transaction is legal (enough credits to send), and verifies the transactionSign
 func (n *Node) verifyTransaction(t Transaction) bool {
-	return ecdsa.Verify(&t.senderKey, []byte(t.hash), t.signR, t.signS)
+	signed := ecdsa.Verify(&t.senderKey, []byte(t.hash), t.signR, t.signS)
+	validBalance := t.amount <= n.checkBalance(t.senderKey)
+	return signed && validBalance
 }
 
-// mine creates a block using the TransactionPool
-func (n *Node) mine() Block {
-	return Block{}
+// mine creates a block using the TransactionPool, returns true if a block was created and false otherwise
+func (n *Node) mine() bool {
+	n.mutex.Lock()
+	if len(n.transactionPool) == 0 {
+		n.mutex.Unlock()
+		return false
+	}
+	n.mutex.Unlock()
+	block := Block{}
+	block.miner = n.pubKey
+	transactionsToMake := make([]Transaction, 0)
+	n.mutex.Lock()
+	poolLength := len(n.transactionPool)
+	n.mutex.Unlock()
+	for poolLength > 0 && len(transactionsToMake) < 5 {
+		n.mutex.Lock()
+		if n.verifyTransaction(n.transactionPool[0]) {
+			transactionsToMake = append(transactionsToMake, n.transactionPool[0])
+		}
+		if poolLength > 1 {
+			n.transactionPool = n.transactionPool[1:]
+		} else {
+			n.transactionPool = make([]Transaction, 0)
+		}
+		poolLength--
+		n.mutex.Unlock()
+	}
+	block.transactions = transactionsToMake
+	block.timestamp = getCurrentMillis()
+	n.mutex.Lock()
+	block.index = n.blockchain[len(n.blockchain)-1].index + 1
+	block.prevHash = n.blockchain[len(n.blockchain)-1].hash
+	n.mutex.Unlock()
+	for {
+		block.filler = randomString()
+		block.updateHash()
+		if block.verifyPOW() {
+			n.mutex.Lock()
+			if n.blockchain[len(n.blockchain)-1].index+1 != block.index || block.prevHash != n.blockchain[len(n.blockchain)-1].hash {
+				block.index = n.blockchain[len(n.blockchain)-1].index + 1
+				block.prevHash = n.blockchain[len(n.blockchain)-1].hash
+				n.mutex.Unlock()
+				continue
+			}
+			n.blockchain = append(n.blockchain, block)
+			n.mutex.Unlock()
+			return true
+		}
+	}
+}
+
+func randomString() string {
+	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	b := make([]rune, 32)
+	for i := range b {
+		b[i] = letters[mrand.Intn(len(letters))]
+	}
+	return string(b)
 }
 
 // checkBalance goes through the blockchain, checks and returns the balance of a certain PublicKey
