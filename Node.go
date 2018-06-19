@@ -13,7 +13,7 @@ import (
 type Node struct {
 	privKey         *ecdsa.PrivateKey
 	pubKey          ecdsa.PublicKey
-	blockchain      []Block
+	blockchain      Blockchain
 	transactionPool []Transaction
 	server          NodeServer
 	recvChannel     chan []byte
@@ -39,26 +39,13 @@ func (n *Node) firstInit() {
 	n.privKey = key
 	n.pubKey = key.PublicKey
 	n.mutex = &sync.Mutex{}
-	n.blockchain = make([]Block, 1)
-	n.blockchain[0] = Block{} // read from a file the genesis block
+	n.blockchain.firstInit()
 	n.transactionPool = make([]Transaction, 0)
 	n.recvChannel = make(chan []byte)
 	n.sendChannel = make(chan []byte)
 	IP := ""
 	n.server.firstInit(IP, n.recvChannel, n.sendChannel)
 	// update blockchain + transactionPool
-}
-
-//verifyBlock verifies the Block is valid
-func (n *Node) verifyBlock(b Block) bool {
-	switch {
-	case b.prevHash != n.blockchain[len(n.blockchain)-1].hash:
-		return false
-	case !b.verifyPOW():
-		return false
-	default:
-		return true
-	}
 }
 
 // verifyTransaction checks the blockchain if the transaction is legal (enough credits to send), and verifies the transactionSign
@@ -97,23 +84,18 @@ func (n *Node) mine() bool {
 	}
 	block.transactions = transactionsToMake
 	block.timestamp = getCurrentMillis()
-	n.mutex.Lock()
-	block.index = n.blockchain[len(n.blockchain)-1].index + 1
-	block.prevHash = n.blockchain[len(n.blockchain)-1].hash
-	n.mutex.Unlock()
+	block.index = n.blockchain.getLatestIndex() + 1
+	block.prevHash = n.blockchain.getLatestHash()
 	for {
 		block.filler = randomString()
 		block.updateHash()
 		if block.verifyPOW() {
-			n.mutex.Lock()
-			if n.blockchain[len(n.blockchain)-1].index+1 != block.index || block.prevHash != n.blockchain[len(n.blockchain)-1].hash {
-				block.index = n.blockchain[len(n.blockchain)-1].index + 1
-				block.prevHash = n.blockchain[len(n.blockchain)-1].hash
-				n.mutex.Unlock()
+			if n.blockchain.isBlockValid(block) { // incase the blockchain was updated while mining
+				block.index = n.blockchain.getLatestIndex() + 1
+				block.prevHash = n.blockchain.getLatestHash()
 				continue
 			}
-			n.blockchain = append(n.blockchain, block)
-			n.mutex.Unlock()
+			n.blockchain.addBlock(block)
 			return true
 		}
 	}
@@ -131,15 +113,15 @@ func randomString() string {
 // checkBalance goes through the blockchain, checks and returns the balance of a certain PublicKey
 func (n *Node) checkBalance(key ecdsa.PublicKey) int {
 	sum := 0
-	for i := 0; i < len(n.blockchain); i++ {
-		if n.blockchain[i].miner == key {
+	for i := 0; i < n.blockchain.length(); i++ {
+		if n.blockchain.getBlock(i).miner == key {
 			sum += 50 // decide how much money to reward miners. for now 50
 		}
-		for j := 0; j < len(n.blockchain[i].transactions); j++ {
-			if n.blockchain[i].transactions[j].senderKey == key {
-				sum -= n.blockchain[i].transactions[j].amount
-			} else if n.blockchain[i].transactions[j].recipientKey == key {
-				sum += n.blockchain[i].transactions[j].amount
+		for j := 0; j < len(n.blockchain.getBlock(i).transactions); j++ {
+			if n.blockchain.getBlock(i).transactions[j].senderKey == key {
+				sum -= n.blockchain.getBlock(i).transactions[j].amount
+			} else if n.blockchain.getBlock(i).transactions[j].recipientKey == key {
+				sum += n.blockchain.getBlock(i).transactions[j].amount
 			}
 		}
 	}
