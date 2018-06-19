@@ -1,16 +1,11 @@
 {
-    "Node": {
-        "FirstInit": true,
-        "PrivateKey": {
-            "PublicKey": {
-                "Curve": "P256",
-                "X": null,
-                "Y": null
-            },
-            "D": null
-        }
+    "FirstInit": true,
+    "PrivateKey": {
+        "PublicKey": {
+            "X": 0,
+            "Y": 0
+        },
+        "D": 0
     } ,
-    "NodeServer": {
-        "Address": null
-    }
+    "Address": ""
 }

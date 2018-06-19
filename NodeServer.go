@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"net"
 	"strconv"
@@ -21,8 +22,7 @@ const (
 	networkProtocol string = "udp"
 )
 
-func (n *NodeServer) init() {
-	// init from file settings
+func (n *NodeServer) init(address string, recvChannel, sendChannel chan []byte) {
 }
 
 func (n *NodeServer) firstInit(address string, recvChannel, sendChannel chan []byte) {
@@ -68,7 +68,10 @@ func (n *NodeServer) handlePeer(conn *net.UDPConn) {
 		return
 	}
 	n.addPeer(address)
-	addressBytes := append(append([]byte{}, byte(len(address.String()))), []byte(address.String())...)
+	port := make([]byte, 2)
+	binary.LittleEndian.PutUint16(port, uint16(address.Port))
+	addressBytes := []byte{address.IP[15], address.IP[14], address.IP[13], address.IP[12]}
+	addressBytes = append(addressBytes, port...)
 	n.recvChannel <- append(addressBytes, data...)
 }
 
@@ -106,13 +109,10 @@ func (n *NodeServer) requestPeers() {
 func (n *NodeServer) sendToPeers() {
 	for {
 		sendData := <-n.sendChannel
-		addressBytesLen, err := strconv.Atoi(string(sendData[0]))
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		address := sendData[1:addressBytesLen]
-		addr, err := net.ResolveUDPAddr(networkProtocol, string(address))
+		address := sendData[:6]
+		port := binary.LittleEndian.Uint16(address[4:])
+		addressS := strconv.Itoa(int(address[0])) + "." + strconv.Itoa(int(address[1])) + "." + strconv.Itoa(int(address[2])) + "." + strconv.Itoa(int(address[3])) + ":" + strconv.Itoa(int(port))
+		addr, err := net.ResolveUDPAddr(networkProtocol, addressS)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -122,7 +122,7 @@ func (n *NodeServer) sendToPeers() {
 			fmt.Println(err)
 			continue
 		}
-		_, err = conn.Write(sendData[addressBytesLen:])
+		_, err = conn.Write(sendData[6:])
 		if err != nil {
 			fmt.Println(err)
 		}

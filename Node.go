@@ -3,8 +3,11 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	crand "crypto/rand"
-	mrand "math/rand"
+	cRand "crypto/rand"
+	"encoding/json"
+	"fmt"
+	mRand "math/rand"
+	"os"
 	"sync"
 	"time"
 )
@@ -21,19 +24,48 @@ type Node struct {
 	mutex           *sync.Mutex
 }
 
-/*
-Init Functions
-*/
-
 // init initiates the Node by either loading a settings file or calling firstInit
 func (n *Node) init() {
+	file, err := os.Open("./Settings.json")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	data := [1024]byte{}
+	i, err := file.Read(data[:])
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	settings := JSONSettings{}
+	err = json.Unmarshal(data[:i], settings)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	n.mutex = &sync.Mutex{}
+	n.privKey = &ecdsa.PrivateKey{
+		PublicKey: ecdsa.PublicKey{
+			Curve: elliptic.P256(),
+			X:     &settings.PrivateKey.PublicKey.X,
+			Y:     &settings.PrivateKey.PublicKey.Y,
+		},
+		D: &settings.PrivateKey.D,
+	}
+	n.pubKey = n.privKey.PublicKey
+	n.recvChannel = make(chan []byte)
+	n.sendChannel = make(chan []byte)
+	n.server.init(settings.Address, n.recvChannel, n.sendChannel)
+	n.blockchain.init()
 }
 
 //firstInit initiates the Node for the first time saves to settings file
 func (n *Node) firstInit() {
 	// check file
-	key, err := ecdsa.GenerateKey(elliptic.P256(), crand.Reader)
+	key, err := ecdsa.GenerateKey(elliptic.P256(), cRand.Reader)
 	if err != nil {
+		fmt.Print(err)
 		return
 	}
 	n.privKey = key
@@ -43,9 +75,58 @@ func (n *Node) firstInit() {
 	n.transactionPool = make([]Transaction, 0)
 	n.recvChannel = make(chan []byte)
 	n.sendChannel = make(chan []byte)
-	IP := ""
+	IP := "" //get IP
 	n.server.firstInit(IP, n.recvChannel, n.sendChannel)
+	n.blockchain.firstInit()
 	// update blockchain + transactionPool
+	n.saveData()
+}
+
+// saveData saves the node's data in the settings file and the sqlite database
+func (n *Node) saveData() {
+	file, err := os.Open("./Settings.json")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	data := [1024]byte{}
+	i, err := file.Read(data[:])
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	settings := JSONSettings{}
+	err = json.Unmarshal(data[:i], settings)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	n.mutex.Lock()
+	settings.PrivateKey.D = *n.privKey.D
+	settings.PrivateKey.PublicKey.X = *n.pubKey.X
+	settings.PrivateKey.PublicKey.Y = *n.pubKey.Y
+	settings.Address = n.server.address
+	n.mutex.Unlock()
+
+	marsheledData, err := json.Marshal(settings)
+	if err != nil {
+		fmt.Println(err)
+		err = file.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+		return
+	}
+	_, err = file.Write(marsheledData)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = file.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
 
 // verifyTransaction checks the blockchain if the transaction is legal (enough credits to send), and verifies the transactionSign
@@ -105,7 +186,7 @@ func randomString() string {
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 	b := make([]rune, 32)
 	for i := range b {
-		b[i] = letters[mrand.Intn(len(letters))]
+		b[i] = letters[mRand.Intn(len(letters))]
 	}
 	return string(b)
 }
