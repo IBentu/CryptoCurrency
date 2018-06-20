@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/hex"
+	"math/big"
 )
 
 // Block is the database for the transaction, blockchain node
@@ -14,13 +15,13 @@ type Block struct {
 	miner        ecdsa.PublicKey
 	hash         string
 	prevHash     string
-	filler       string
+	filler       *big.Int
 }
 
 // updateHash updates the block hash
 func (b *Block) updateHash() {
 	hash := sha256.New()
-	data := string(b.index) + string(b.timestamp) + transactionSliceToString(b.transactions) + pubKeyToString(b.miner) + b.prevHash + b.filler
+	data := string(b.index) + string(b.timestamp) + transactionSliceToString(b.transactions) + pubKeyToString(b.miner) + b.prevHash + b.filler.String()
 	hash.Write([]byte(data))
 	hashChecksum := hash.Sum(nil)
 	b.hash = hex.EncodeToString(hashChecksum)

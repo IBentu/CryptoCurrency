@@ -6,7 +6,6 @@ import (
 	cRand "crypto/rand"
 	"fmt"
 	"math/big"
-	mRand "math/rand"
 	"sync"
 	"time"
 )
@@ -128,8 +127,10 @@ func (n *Node) mine() bool {
 	block.timestamp = getCurrentMillis()
 	block.index = n.blockchain.getLatestIndex() + 1
 	block.prevHash = n.blockchain.getLatestHash()
+	var counter int64
 	for {
-		block.filler = randomString()
+		block.filler = big.NewInt(counter)
+		counter++
 		block.updateHash()
 		if block.verifyPOW() {
 			if n.blockchain.isBlockValid(block) { // incase the blockchain was updated while mining
@@ -141,15 +142,6 @@ func (n *Node) mine() bool {
 			return true
 		}
 	}
-}
-
-func randomString() string {
-	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-	b := make([]rune, 32)
-	for i := range b {
-		b[i] = letters[mRand.Intn(len(letters))]
-	}
-	return string(b)
 }
 
 // checkBalance goes through the blockchain, checks and returns the balance of a certain PublicKey
