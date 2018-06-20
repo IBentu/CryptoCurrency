@@ -31,10 +31,10 @@ func (n *NodeServer) firstInit(address string, recvChannel, sendChannel chan []b
 	n.address = address
 	n.recvChannel = recvChannel
 	n.sendChannel = sendChannel
-	go n.listenForPeers()
-	go n.SyncBlockchain()
-	go n.SyncTransactionPool()
-	go n.sendToPeers()
+	//go n.listenForPeers()
+	//go n.SyncBlockchain()
+	//go n.SyncTransactionPool()
+	//go n.sendToPeers()
 }
 
 // SyncBlockchain sends a SCM (refer to protocol doc) to all peers repeatedly.

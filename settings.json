@@ -1,11 +1,1 @@
-{
-    "FirstInit": true,
-    "PrivateKey": {
-        "PublicKey": {
-            "X": 0,
-            "Y": 0
-        },
-        "D": 0
-    } ,
-    "Address": ""
-}
+{"FirstInit":false,"PrivateKey":{"PublicKey":{"X":-4533118683580883979,"Y":8573455987513313937},"D":5449941868614288808},"Address":"192.168.1.20"}

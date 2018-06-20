@@ -4,10 +4,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	cRand "crypto/rand"
-	"encoding/json"
 	"fmt"
+	"math/big"
 	mRand "math/rand"
-	"os"
 	"sync"
 	"time"
 )
@@ -26,32 +25,17 @@ type Node struct {
 
 // init initiates the Node by either loading a settings file or calling firstInit
 func (n *Node) init() {
-	file, err := os.Open("./Settings.json")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	data := [1024]byte{}
-	i, err := file.Read(data[:])
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	settings := JSONSettings{}
-	err = json.Unmarshal(data[:i], settings)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	settings, err := readJSON()
+	checkError(err)
 
 	n.mutex = &sync.Mutex{}
 	n.privKey = &ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{
 			Curve: elliptic.P256(),
-			X:     &settings.PrivateKey.PublicKey.X,
-			Y:     &settings.PrivateKey.PublicKey.Y,
+			X:     big.NewInt(settings.PrivateKey.PublicKey.X),
+			Y:     big.NewInt(settings.PrivateKey.PublicKey.Y),
 		},
-		D: &settings.PrivateKey.D,
+		D: big.NewInt(settings.PrivateKey.D),
 	}
 	n.pubKey = n.privKey.PublicKey
 	n.recvChannel = make(chan []byte)
@@ -75,7 +59,11 @@ func (n *Node) firstInit() {
 	n.transactionPool = make([]Transaction, 0)
 	n.recvChannel = make(chan []byte)
 	n.sendChannel = make(chan []byte)
-	IP := "" //get IP
+	IP, err := getIPAddress()
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
 	n.server.firstInit(IP, n.recvChannel, n.sendChannel)
 	n.blockchain.firstInit()
 	// update blockchain + transactionPool
@@ -84,47 +72,20 @@ func (n *Node) firstInit() {
 
 // saveData saves the node's data in the settings file and the sqlite database
 func (n *Node) saveData() {
-	file, err := os.Open("./Settings.json")
+	settings, err := readJSON()
 	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	data := [1024]byte{}
-	i, err := file.Read(data[:])
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	settings := JSONSettings{}
-	err = json.Unmarshal(data[:i], settings)
-	if err != nil {
-		fmt.Println(err)
+		fmt.Print(err)
 		return
 	}
 	n.mutex.Lock()
-	settings.PrivateKey.D = *n.privKey.D
-	settings.PrivateKey.PublicKey.X = *n.pubKey.X
-	settings.PrivateKey.PublicKey.Y = *n.pubKey.Y
+	settings.PrivateKey.D = n.privKey.D.Int64()
+	settings.PrivateKey.PublicKey.X = n.pubKey.X.Int64()
+	settings.PrivateKey.PublicKey.Y = n.pubKey.Y.Int64()
 	settings.Address = n.server.address
 	n.mutex.Unlock()
-
-	marsheledData, err := json.Marshal(settings)
+	err = writeJSON(settings)
 	if err != nil {
-		fmt.Println(err)
-		err = file.Close()
-		if err != nil {
-			fmt.Println(err)
-		}
-		return
-	}
-	_, err = file.Write(marsheledData)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	err = file.Close()
-	if err != nil {
-		fmt.Println(err)
+		fmt.Print(err)
 		return
 	}
 }
