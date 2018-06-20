@@ -49,10 +49,10 @@ func (bc *Blockchain) getLatestHash() string {
 	return hash
 }
 
-func (bc *Blockchain) addBlock(b Block) {
+func (bc *Blockchain) addBlock(b *Block) {
 	bc.mutex.Lock()
-	bc.blocks = append(bc.blocks, &b)
-	bc.hashMap[b.hash] = &b
+	bc.blocks = append(bc.blocks, b)
+	bc.hashMap[b.hash] = b
 	bc.mutex.Unlock()
 }
 

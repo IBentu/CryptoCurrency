@@ -17,20 +17,20 @@ func TestCheckBalance(t *testing.T) {
 	}
 	node := Node{
 		pubKey:     key.PublicKey,
-		blockchain: Blockchain{},
+		blockchain: &Blockchain{},
 	}
 	node.blockchain.mutex = &sync.Mutex{}
 	node.blockchain.blocks = make([]*Block, 2)
 	node.blockchain.blocks[0], node.blockchain.blocks[1] = &Block{}, &Block{}
 
-	node.blockchain.blocks[0].transactions = make([]Transaction, 2)
-	node.blockchain.blocks[1].transactions = make([]Transaction, 1)
+	node.blockchain.blocks[0].transactions = make([]*Transaction, 2)
+	node.blockchain.blocks[1].transactions = make([]*Transaction, 1)
 
 	node.blockchain.blocks[0].miner = ecdsa.PublicKey{}
 	node.blockchain.blocks[1].miner = node.pubKey
-	node.blockchain.blocks[0].transactions[0] = Transaction{amount: 3, recipientKey: node.pubKey, senderKey: ecdsa.PublicKey{}}
-	node.blockchain.blocks[0].transactions[1] = Transaction{amount: 9, recipientKey: node.pubKey, senderKey: ecdsa.PublicKey{}}
-	node.blockchain.blocks[1].transactions[0] = Transaction{amount: 2, recipientKey: ecdsa.PublicKey{}, senderKey: node.pubKey}
+	node.blockchain.blocks[0].transactions[0] = &Transaction{amount: 3, recipientKey: node.pubKey, senderKey: ecdsa.PublicKey{}}
+	node.blockchain.blocks[0].transactions[1] = &Transaction{amount: 9, recipientKey: node.pubKey, senderKey: ecdsa.PublicKey{}}
+	node.blockchain.blocks[1].transactions[0] = &Transaction{amount: 2, recipientKey: ecdsa.PublicKey{}, senderKey: node.pubKey}
 	sum := node.checkBalance(node.pubKey)
 	expected := 60
 	if sum != expected {
@@ -57,11 +57,9 @@ func TestMine(t *testing.T) {
 	node.privKey = key1
 	node.pubKey = key1.PublicKey
 	node.mutex = &sync.Mutex{}
-	node.blockchain.mutex = &sync.Mutex{}
-	node.blockchain.hashMap = make(map[string]*Block)
-	node.blockchain.blocks = make([]*Block, 1)
+	node.blockchain = &Blockchain{mutex: &sync.Mutex{}, hashMap: make(map[string]*Block), blocks: make([]*Block, 1)}
 	node.blockchain.blocks[0] = &Block{hash: "0000000020422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3", index: 0}
-	node.transactionPool = make([]Transaction, 3)
+	node.transactionPool = &TransactionPool{transactions: make([]*Transaction, 3), mutex: &sync.Mutex{}}
 
 	key2, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -69,21 +67,21 @@ func TestMine(t *testing.T) {
 	}
 	pKey1 := key1.PublicKey
 	pKey2 := key2.PublicKey
-	node.transactionPool[0] = Transaction{amount: 0, senderKey: pKey1, recipientKey: pKey2}
-	node.transactionPool[0].hashTransaction()
-	err = node.transactionPool[0].sign(key1)
+	node.transactionPool.transactions[0] = &Transaction{amount: 0, senderKey: pKey1, recipientKey: pKey2}
+	node.transactionPool.transactions[0].hashTransaction()
+	err = node.transactionPool.transactions[0].sign(key1)
 	if err != nil {
 		t.Error(err)
 	}
-	node.transactionPool[1] = Transaction{amount: 0, senderKey: pKey2, recipientKey: pKey1}
-	node.transactionPool[1].hashTransaction()
-	err = node.transactionPool[1].sign(key2)
+	node.transactionPool.transactions[1] = &Transaction{amount: 0, senderKey: pKey2, recipientKey: pKey1}
+	node.transactionPool.transactions[1].hashTransaction()
+	err = node.transactionPool.transactions[1].sign(key2)
 	if err != nil {
 		t.Error(err)
 	}
-	node.transactionPool[2] = Transaction{amount: 0, senderKey: pKey1, recipientKey: pKey2}
-	node.transactionPool[2].hashTransaction()
-	err = node.transactionPool[2].sign(key1)
+	node.transactionPool.transactions[2] = &Transaction{amount: 0, senderKey: pKey1, recipientKey: pKey2}
+	node.transactionPool.transactions[2].hashTransaction()
+	err = node.transactionPool.transactions[2].sign(key1)
 	if err != nil {
 		t.Error(err)
 	}

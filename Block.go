@@ -11,7 +11,7 @@ import (
 type Block struct {
 	index        int
 	timestamp    int64
-	transactions []Transaction
+	transactions []*Transaction
 	miner        ecdsa.PublicKey
 	hash         string
 	prevHash     string
@@ -28,7 +28,7 @@ func (b *Block) updateHash() {
 }
 
 //transactionSliceToByteSlice returns a byte slice that can be hashed
-func transactionSliceToString(transactions []Transaction) string {
+func transactionSliceToString(transactions []*Transaction) string {
 	str := ""
 	for i := 0; i < len(transactions); i++ {
 		str += transactions[i].toString()

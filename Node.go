@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	cRand "crypto/rand"
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"sync"
@@ -14,15 +14,15 @@ import (
 type Node struct {
 	privKey         *ecdsa.PrivateKey
 	pubKey          ecdsa.PublicKey
-	blockchain      Blockchain
-	transactionPool []Transaction
-	server          NodeServer
+	blockchain      *Blockchain
+	transactionPool *TransactionPool
+	server          *NodeServer
 	recvChannel     chan []byte
 	sendChannel     chan []byte
 	mutex           *sync.Mutex
 }
 
-// init initiates the Node by either loading a settings file or calling firstInit
+// init initiates the Node by loading a json settings file
 func (n *Node) init() {
 	settings, err := readJSON()
 	checkError(err)
@@ -41,12 +41,13 @@ func (n *Node) init() {
 	n.sendChannel = make(chan []byte)
 	n.server.init(settings.Address, n.recvChannel, n.sendChannel)
 	n.blockchain.init()
+	n.transactionPool.init()
 }
 
-//firstInit initiates the Node for the first time saves to settings file
+//firstInit initiates the Node for the first time, and saves to a json settings file
 func (n *Node) firstInit() {
 	// check file
-	key, err := ecdsa.GenerateKey(elliptic.P256(), cRand.Reader)
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		fmt.Print(err)
 		return
@@ -55,7 +56,7 @@ func (n *Node) firstInit() {
 	n.pubKey = key.PublicKey
 	n.mutex = &sync.Mutex{}
 	n.blockchain.firstInit()
-	n.transactionPool = make([]Transaction, 0)
+	n.transactionPool.firstInit()
 	n.recvChannel = make(chan []byte)
 	n.sendChannel = make(chan []byte)
 	IP, err := getIPAddress()
@@ -90,7 +91,7 @@ func (n *Node) saveData() {
 }
 
 // verifyTransaction checks the blockchain if the transaction is legal (enough credits to send), and verifies the transactionSign
-func (n *Node) verifyTransaction(t Transaction) bool {
+func (n *Node) verifyTransaction(t *Transaction) bool {
 	signed := ecdsa.Verify(&t.senderKey, []byte(t.hash), t.signR, t.signS)
 	validBalance := t.amount <= n.checkBalance(t.senderKey)
 	return signed && validBalance
@@ -99,29 +100,19 @@ func (n *Node) verifyTransaction(t Transaction) bool {
 // mine creates a block using the TransactionPool, returns true if a block was created and false otherwise
 func (n *Node) mine() bool {
 	n.mutex.Lock()
-	if len(n.transactionPool) == 0 {
+	if n.transactionPool.length() == 0 {
 		n.mutex.Unlock()
 		return false
 	}
 	n.mutex.Unlock()
 	block := Block{}
 	block.miner = n.pubKey
-	transactionsToMake := make([]Transaction, 0)
-	n.mutex.Lock()
-	poolLength := len(n.transactionPool)
-	n.mutex.Unlock()
-	for poolLength > 0 && len(transactionsToMake) < 5 {
-		n.mutex.Lock()
-		if n.verifyTransaction(n.transactionPool[0]) {
-			transactionsToMake = append(transactionsToMake, n.transactionPool[0])
+	transactionsToMake := make([]*Transaction, 0)
+	for n.transactionPool.length() > 0 && len(transactionsToMake) < 5 {
+		t := n.transactionPool.remove()
+		if n.verifyTransaction(t) {
+			transactionsToMake = append(transactionsToMake, t)
 		}
-		if poolLength > 1 {
-			n.transactionPool = n.transactionPool[1:]
-		} else {
-			n.transactionPool = make([]Transaction, 0)
-		}
-		poolLength--
-		n.mutex.Unlock()
 	}
 	block.transactions = transactionsToMake
 	block.timestamp = getCurrentMillis()
@@ -138,7 +129,7 @@ func (n *Node) mine() bool {
 				block.prevHash = n.blockchain.getLatestHash()
 				continue
 			}
-			n.blockchain.addBlock(block)
+			n.blockchain.addBlock(&block)
 			return true
 		}
 	}
@@ -178,9 +169,7 @@ func (n *Node) makeTransaction(recipient ecdsa.PublicKey, amount int) bool {
 	if err != nil {
 		return false
 	}
-	n.mutex.Lock()
-	n.transactionPool = append(n.transactionPool, t)
-	n.mutex.Unlock()
+	n.transactionPool.addTransaction(&t)
 	return true
 }
 
