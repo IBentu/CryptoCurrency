@@ -1,10 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"encoding/binary"
+	"encoding/gob"
 	"net"
 	"sync"
 	"testing"
@@ -49,7 +50,7 @@ func TestMine(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	node := Node{}
+	var node Node
 	key1, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Error(err)
@@ -96,31 +97,32 @@ func TestMine(t *testing.T) {
 	}
 }
 
-func TestSendToPeers(t *testing.T) {
-	srvr := NodeServer{}
-	dataToSend := make(chan []byte)
+func TestSendToPeers(t *testing.T) { // NOT WORKING
+	var srvr NodeServer
+	dataToSend := make(chan *Packet)
 	srvr.sendChannel = dataToSend
-	go srvr.sendToPeers()
+	go srvr.sendToPeer()
 	addr, err := net.ResolveUDPAddr("udp4", "127.0.0.1:2323")
 	if err != nil {
 		t.Error(err)
 	}
-	addressB := []byte{addr.IP[15], addr.IP[14], addr.IP[13], addr.IP[12]}
-	port := make([]byte, 2)
-	binary.LittleEndian.PutUint16(port, uint16(addr.Port))
-	data := append(append(addressB, port...), []byte("hello")...)
-	dataToSend <- data
+	p := &Packet{
+		dstAddress: addr.String(),
+		srcAddress: "127.0.0.1:1234",
+		data:       []byte("hello"),
+	}
 	conn, err := net.ListenUDP("udp", addr)
+	dataToSend <- p
 	if err != nil {
 		t.Error(err)
 	}
-	var buff []byte
-	_, _, err = conn.ReadFromUDP(buff)
-	if err != nil {
-		t.Error(err)
+	var recvP Packet
+	inputBytes := make([]byte, 4096)
+	length, _, _ := conn.ReadFromUDP(inputBytes)
+	buffer := bytes.NewBuffer(inputBytes[:length])
+	decoder := gob.NewDecoder(buffer)
+	decoder.Decode(&recvP)
+	if string(recvP.data) != "hello" {
+		t.Errorf("Was expecting to receive \"hello\", instead got \"%s\"", string(recvP.data))
 	}
-	if string(buff) != "hello" {
-		t.Errorf("Was expecting to receive \"hello\", instead got \"%s\"", string(buff))
-	}
-
 }

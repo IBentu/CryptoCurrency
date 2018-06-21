@@ -17,8 +17,8 @@ type Node struct {
 	blockchain      *Blockchain
 	transactionPool *TransactionPool
 	server          *NodeServer
-	recvChannel     chan []byte
-	sendChannel     chan []byte
+	recvChannel     chan *Packet
+	sendChannel     chan *Packet
 	mutex           *sync.Mutex
 }
 
@@ -37,8 +37,8 @@ func (n *Node) init() {
 		D: big.NewInt(settings.PrivateKey.D),
 	}
 	n.pubKey = n.privKey.PublicKey
-	n.recvChannel = make(chan []byte)
-	n.sendChannel = make(chan []byte)
+	n.recvChannel = make(chan *Packet)
+	n.sendChannel = make(chan *Packet)
 	n.server.init(settings.Address, n.recvChannel, n.sendChannel)
 	n.blockchain.init()
 	n.transactionPool.init()
@@ -57,8 +57,8 @@ func (n *Node) firstInit() {
 	n.mutex = &sync.Mutex{}
 	n.blockchain.firstInit()
 	n.transactionPool.firstInit()
-	n.recvChannel = make(chan []byte)
-	n.sendChannel = make(chan []byte)
+	n.recvChannel = make(chan *Packet)
+	n.sendChannel = make(chan *Packet)
 	IP, err := getIPAddress()
 	if err != nil {
 		fmt.Print(err)
@@ -197,7 +197,7 @@ func (n *Node) getServerData() {
 }
 
 // handleRequest handles the requests from the dataQueue in the NodeServer
-func (n *Node) handleRequest(request []byte) {
+func (n *Node) handleRequest(request *Packet) {
 }
 
 // getCurrentMillis returns the current time in millisecs

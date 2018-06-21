@@ -1,20 +1,28 @@
 package main
 
 import (
-	"encoding/binary"
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"net"
-	"strconv"
 	"sync"
 )
 
 // NodeServer is the server of the node and it is responsible for communication between nodes
 type NodeServer struct {
-	peers       []string
+	peers       []*net.UDPAddr
 	address     string
 	mutex       *sync.Mutex
-	recvChannel chan []byte
-	sendChannel chan []byte
+	recvChannel chan *Packet
+	sendChannel chan *Packet
+}
+
+// Packet is the struct for transferring data between Nodes
+type Packet struct {
+	srcAddress  string
+	dstAddress  string
+	requestType string
+	data        []byte
 }
 
 const (
@@ -22,12 +30,12 @@ const (
 	networkProtocol string = "udp"
 )
 
-func (n *NodeServer) init(address string, recvChannel, sendChannel chan []byte) {
+func (n *NodeServer) init(address string, recvChannel, sendChannel chan *Packet) {
 }
 
-func (n *NodeServer) firstInit(address string, recvChannel, sendChannel chan []byte) {
+func (n *NodeServer) firstInit(address string, recvChannel, sendChannel chan *Packet) {
 	n.mutex = &sync.Mutex{}
-	n.peers = make([]string, 0) // read from a certain file a few first peers
+	n.peers = make([]*net.UDPAddr, 0) // read from a certain file a few first peers
 	n.address = address
 	n.recvChannel = recvChannel
 	n.sendChannel = sendChannel
@@ -61,38 +69,40 @@ func (n *NodeServer) listenForPeers() {
 
 // handlePeer handles a connection from another node
 func (n *NodeServer) handlePeer(conn *net.UDPConn) {
-	data := make([]byte, 1024)
-	_, address, err := conn.ReadFromUDP(data)
+	defer conn.Close()
+	recvBytes := make([]byte, 4096)
+	length, address, err := conn.ReadFromUDP(recvBytes)
 	if err != nil {
 		fmt.Print(err)
 		return
 	}
+	var p Packet
+	buffer := bytes.NewBuffer(recvBytes[:length])
+	decoder := gob.NewDecoder(buffer)
+	decoder.Decode(&p)
 	n.addPeer(address)
-	port := make([]byte, 2)
-	binary.LittleEndian.PutUint16(port, uint16(address.Port))
-	addressBytes := []byte{address.IP[15], address.IP[14], address.IP[13], address.IP[12]}
-	addressBytes = append(addressBytes, port...)
-	n.recvChannel <- append(addressBytes, data...)
+	n.recvChannel <- &p
 }
 
 // addPeer calls doesPeerExist and adds the address to Peers if the address can not be found in there
-func (n *NodeServer) addPeer(address net.Addr) {
+func (n *NodeServer) addPeer(address *net.UDPAddr) {
 	if !n.doesPeerExist(address) {
 		n.mutex.Lock()
-		n.peers = append(n.peers, address.String())
+		n.peers = append(n.peers, address)
 		n.mutex.Unlock()
 	}
 }
 
 // doesPeerExist checks if the connected peer is already listed in the
 // Peers slice
-func (n *NodeServer) doesPeerExist(address net.Addr) bool {
+func (n *NodeServer) doesPeerExist(address *net.UDPAddr) bool {
 	n.mutex.Lock()
 	peersLen := len(n.peers)
 	n.mutex.Unlock()
 	for i := 0; i < peersLen; i++ {
 		n.mutex.Lock()
-		if address.String() == n.peers[i] {
+		if address.String() == n.peers[i].String() {
+			n.mutex.Unlock()
 			return true
 		}
 		n.mutex.Unlock()
@@ -102,29 +112,35 @@ func (n *NodeServer) doesPeerExist(address net.Addr) bool {
 
 // requestPeers requests peers from known nodes according to protocol
 func (n *NodeServer) requestPeers() {
-
 }
 
-// sendToPeers receives data from channel and sends to given address (from data)
-func (n *NodeServer) sendToPeers() {
+// sendToPeer receives data from channel and sends to given address (from data)
+func (n *NodeServer) sendToPeer() {
+	var buffer bytes.Buffer
 	for {
-		sendData := <-n.sendChannel
-		address := sendData[:6]
-		port := binary.LittleEndian.Uint16(address[4:])
-		addressS := strconv.Itoa(int(address[0])) + "." + strconv.Itoa(int(address[1])) + "." + strconv.Itoa(int(address[2])) + "." + strconv.Itoa(int(address[3])) + ":" + strconv.Itoa(int(port))
-		addr, err := net.ResolveUDPAddr(networkProtocol, addressS)
+		p := <-n.sendChannel
+		dstAddr, err := net.ResolveUDPAddr(networkProtocol, p.dstAddress)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		conn, err := net.DialUDP(networkProtocol, nil, addr)
+		srcAddr, err := net.ResolveUDPAddr(networkProtocol, p.srcAddress)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		_, err = conn.Write(sendData[6:])
+		conn, err := net.DialUDP(networkProtocol, srcAddr, dstAddr)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		encoder := gob.NewEncoder(&buffer)
+		encoder.Encode(p)
+		_, err = conn.Write(buffer.Bytes())
 		if err != nil {
 			fmt.Println(err)
 		}
+		conn.Close()
+		buffer.Reset()
 	}
 }
