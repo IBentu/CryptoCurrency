@@ -17,14 +17,6 @@ type NodeServer struct {
 	sendChannel chan *Packet
 }
 
-// Packet is the struct for transferring data between Nodes
-type Packet struct {
-	srcAddress  string
-	dstAddress  string
-	requestType string
-	data        []byte
-}
-
 const (
 	// networkProtocol is the protocol used in the network layer (UDP with IPv4)
 	networkProtocol string = "udp"
@@ -116,7 +108,6 @@ func (n *NodeServer) requestPeers() {
 
 // sendToPeer receives data from channel and sends to given address (from data)
 func (n *NodeServer) sendToPeer() {
-	var buffer bytes.Buffer
 	for {
 		p := <-n.sendChannel
 		dstAddr, err := net.ResolveUDPAddr(networkProtocol, p.dstAddress)
@@ -124,7 +115,7 @@ func (n *NodeServer) sendToPeer() {
 			fmt.Println(err)
 			continue
 		}
-		srcAddr, err := net.ResolveUDPAddr(networkProtocol, p.srcAddress)
+		srcAddr, err := net.ResolveUDPAddr(networkProtocol, n.address)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -134,13 +125,10 @@ func (n *NodeServer) sendToPeer() {
 			fmt.Println(err)
 			continue
 		}
-		encoder := gob.NewEncoder(&buffer)
-		encoder.Encode(p)
-		_, err = conn.Write(buffer.Bytes())
+		_, err = conn.Write(p.bytes())
 		if err != nil {
 			fmt.Println(err)
 		}
 		conn.Close()
-		buffer.Reset()
 	}
 }

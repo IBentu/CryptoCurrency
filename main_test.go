@@ -97,7 +97,38 @@ func TestMine(t *testing.T) {
 	}
 }
 
-func TestSendToPeers(t *testing.T) { // NOT WORKING
+func TestSendToPeer(t *testing.T) {
+	var srvr NodeServer
+	dataToSend := make(chan *Packet)
+	srvr.sendChannel = dataToSend
+	go srvr.sendToPeer()
+	addr, err := net.ResolveUDPAddr("udp4", "127.0.0.1:2323")
+	if err != nil {
+		t.Error(err)
+	}
+	p := &Packet{
+		dstAddress: addr.String(),
+		srcAddress: "127.0.0.1:1234",
+		data:       []byte("hello"),
+	}
+	conn, err := net.ListenUDP("udp", addr)
+	dataToSend <- p
+	if err != nil {
+		t.Error(err)
+	}
+	defer conn.Close()
+	inputBytes := make([]byte, 4096)
+	_, _, err = conn.ReadFromUDP(inputBytes)
+	if err != nil {
+		t.Error(err)
+	}
+	recvP := toPacket(inputBytes)
+	if string(recvP.data) != "hello" {
+		t.Errorf("Was expecting to receive \"hello\", instead got \"%s\"", string(recvP.data))
+	}
+}
+
+func TestSendToPeer2(t *testing.T) { // NOT WORKING
 	var srvr NodeServer
 	dataToSend := make(chan *Packet)
 	srvr.sendChannel = dataToSend
