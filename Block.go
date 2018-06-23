@@ -27,15 +27,6 @@ func (b *Block) updateHash() {
 	b.hash = hex.EncodeToString(hashChecksum)
 }
 
-//transactionSliceToByteSlice returns a byte slice that can be hashed
-func transactionSliceToString(transactions []*Transaction) string {
-	str := ""
-	for i := 0; i < len(transactions); i++ {
-		str += transactions[i].toString()
-	}
-	return str
-}
-
 // verifyPOW verifies if the Proof-of-Work is valid in the block
 func (b *Block) verifyPOW() bool {
 	hashBytes := []byte(b.hash)

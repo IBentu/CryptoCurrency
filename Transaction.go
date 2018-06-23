@@ -19,8 +19,18 @@ type Transaction struct {
 	signS        *big.Int
 }
 
+// toString returns all the Transaction's fields that need to be hashed as a formatted
 func (t *Transaction) toString() string {
 	return pubKeyToString(t.senderKey) + pubKeyToString(t.recipientKey) + string(t.amount) + string(t.timestamp)
+}
+
+//transactionSliceToByteSlice returns a byte slice that can be hashed
+func transactionSliceToString(transactions []*Transaction) string {
+	str := ""
+	for i := 0; i < len(transactions); i++ {
+		str += transactions[i].toString()
+	}
+	return str
 }
 
 // returns a string of a PublicKey
