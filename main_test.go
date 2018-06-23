@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"encoding/gob"
 	"net"
 	"sync"
 	"testing"
@@ -123,36 +121,6 @@ func TestSendToPeer(t *testing.T) {
 		t.Error(err)
 	}
 	recvP := toPacket(inputBytes)
-	if string(recvP.data) != "hello" {
-		t.Errorf("Was expecting to receive \"hello\", instead got \"%s\"", string(recvP.data))
-	}
-}
-
-func TestSendToPeer2(t *testing.T) { // NOT WORKING
-	var srvr NodeServer
-	dataToSend := make(chan *Packet)
-	srvr.sendChannel = dataToSend
-	go srvr.sendToPeer()
-	addr, err := net.ResolveUDPAddr("udp4", "127.0.0.1:2323")
-	if err != nil {
-		t.Error(err)
-	}
-	p := &Packet{
-		dstAddress: addr.String(),
-		srcAddress: "127.0.0.1:1234",
-		data:       []byte("hello"),
-	}
-	conn, err := net.ListenUDP("udp", addr)
-	dataToSend <- p
-	if err != nil {
-		t.Error(err)
-	}
-	var recvP Packet
-	inputBytes := make([]byte, 4096)
-	length, _, _ := conn.ReadFromUDP(inputBytes)
-	buffer := bytes.NewBuffer(inputBytes[:length])
-	decoder := gob.NewDecoder(buffer)
-	decoder.Decode(&recvP)
 	if string(recvP.data) != "hello" {
 		t.Errorf("Was expecting to receive \"hello\", instead got \"%s\"", string(recvP.data))
 	}
