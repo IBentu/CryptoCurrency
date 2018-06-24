@@ -26,7 +26,6 @@ type Node struct {
 func (n *Node) init() {
 	settings, err := readJSON()
 	checkError(err)
-
 	n.mutex = &sync.Mutex{}
 	n.privKey = &ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{
@@ -105,7 +104,7 @@ func (n *Node) mine() bool {
 		return false
 	}
 	n.mutex.Unlock()
-	block := Block{}
+	var block Block
 	block.miner = n.pubKey
 	transactionsToMake := make([]*Transaction, 0)
 	for n.transactionPool.length() > 0 && len(transactionsToMake) < 5 {
@@ -156,7 +155,7 @@ func (n *Node) checkBalance(key ecdsa.PublicKey) int {
 // makeTransaction create a trnsaction adds it to the pool and returns true if transaction is legal,
 // otherwise it returns false
 func (n *Node) makeTransaction(recipient ecdsa.PublicKey, amount int) bool {
-	t := Transaction{}
+	var t Transaction
 	if amount < n.checkBalance(n.pubKey) {
 		return false
 	}

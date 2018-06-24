@@ -9,7 +9,7 @@ import (
 func main() {
 	settings, err := readJSON()
 	checkError(err)
-	node := Node{}
+	var node Node
 	if settings.FirstInit {
 		settings.FirstInit = false
 		err = writeJSON(settings)
@@ -25,7 +25,7 @@ func readJSON() (*JSONSettings, error) {
 	if err != nil {
 		return nil, err
 	}
-	settings := JSONSettings{}
+	var settings JSONSettings
 	err = json.Unmarshal(data, &settings)
 	if err != nil {
 		return nil, err
