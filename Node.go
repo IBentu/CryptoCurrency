@@ -173,18 +173,60 @@ func (n *Node) makeTransaction(recipient ecdsa.PublicKey, amount int) bool {
 }
 
 // handleSCM handles every SCM
-func (n *Node) handleSCM(hash string, index int) {
+func (n *Node) handleSCM(request *Packet) {
+	data := request.data
+	index, hash, err := unformatSCM(data)
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+	res := n.compareSCM(index, hash)
+	switch res {
+	case 0:
+		return
+	case 1:
+		var p *Packet
+		p.dstAddress = request.srcAddress
+		p.srcAddress = request.dstAddress
+		p.requestType = "IS"
+		p.data = formatIS(n.blockchain.getLatestIndex())
+		n.sendChannel <- p
+	case 2:
+		// THINK HOW TO COMPARE BLOCKS ============================================================================================
+	case 3:
+	}
 }
 
-// compare SCM compares by Blockchain Sync Protocol (refer to protocol doc):
+// compareSCM compares by Blockchain Sync Protocol (refer to protocol doc):
 // 		returns 0 if scenario 1
 // 		returns 0 if scenario 2.i
 // 		returns 0 if scenario 2.ii.a
-// 		returns -1 if scenario 2.ii.b
-// 		returns 1 if scenario 3.i
-// 		returns -2 if scenario 3.ii
-func (n *Node) compareSCM(hash string, index int) int {
+// 		returns 1 if scenario 2.ii.b
+// 		returns 2 if scenario 3.i
+// 		returns 3 if scenario 3.ii
+func (n *Node) compareSCM(index int, hash string) int {
 	return 0
+}
+
+// handleFT handles all FT requests
+func (n *Node) handleFT(request *Packet) {
+}
+
+// handleIS handles all IS requests
+func (n *Node) handleIS(request *Packet) {
+}
+
+// handleIS handles all NT requests
+func (n *Node) handleNT(request *Packet) {
+}
+
+// handleSTPM handles all STPMs
+func (n *Node) handleSTPM(request *Packet) {
+}
+
+// handleBlocks handleRecieved blocks from peers
+func (n *Node) handleBlocks(request *Packet) {
+
 }
 
 // getServerData checks to see if a request is received from the NodeServer
@@ -197,6 +239,22 @@ func (n *Node) getServerData() {
 
 // handleRequest handles the requests from the dataQueue in the NodeServer
 func (n *Node) handleRequest(request *Packet) {
+	switch request.requestType {
+	case "SCM":
+		n.handleSCM(request)
+	case "FT":
+		n.handleFT(request)
+	case "IS":
+		n.handleIS(request)
+	case "NT":
+		n.handleNT(request)
+	case "STPM":
+		n.handleSTPM(request)
+	case "B":
+		n.handleBlocks(request)
+	default:
+		fmt.Print("Unknown request type.")
+	}
 }
 
 // getCurrentMillis returns the current time in millisecs

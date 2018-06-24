@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"sync"
 )
 
@@ -42,4 +43,25 @@ func (tp *TransactionPool) addTransaction(t *Transaction) {
 	tp.mutex.Lock()
 	tp.transactions = append(tp.transactions, t)
 	tp.mutex.Unlock()
+}
+
+func (tp *TransactionPool) formatSTPM() []byte {
+	var data []byte
+	for _, v := range tp.transactions {
+		data = append(append(data, v.formatTransaction()...), []byte("|\000")...)
+	}
+	return data
+}
+
+func unformatSTPM(data []byte) ([]*Transaction, error) {
+	splat := bytes.Split(data, []byte("|\000"))
+	trans := make([]*Transaction, 0)
+	for _, v := range splat {
+		t, err := unformatTransaction(v)
+		if err != nil {
+			return nil, err
+		}
+		trans = append(trans, t)
+	}
+	return trans, nil
 }
