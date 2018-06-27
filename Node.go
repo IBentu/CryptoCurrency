@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -187,14 +188,47 @@ func (n *Node) handleSCM(request *Packet) {
 	case 1:
 		var p *Packet
 		p.dstAddress = request.srcAddress
-		p.srcAddress = request.dstAddress
-		p.requestType = "IS"
-		p.data = formatIS(n.blockchain.getLatestIndex())
+		p.srcAddress = n.server.getAddress()
+		p.requestType = "FT"
+		p.data = formatFT(index)
 		n.sendChannel <- p
 	case 2:
-		// THINK HOW TO COMPARE BLOCKS ============================================================================================
-	case 3:
+		scenario, err := n.compareBlockchain(request, index)
+		if err != nil {
+			fmt.Print(err)
+			return
+		}
+		if scenario {
+
+		}
 	}
+}
+
+// compareBlockchain compares the current blockchain with one from another node
+// the returned bool is for the different scenarios (refer to protocol doc):
+//	false - scenario 3.i
+//  true - scenario 3.ii
+func (n *Node) compareBlockchain(p *Packet, recvIndex int) (bool, error) {
+	var newP *Packet
+	newP.dstAddress = p.srcAddress
+	newP.srcAddress = n.server.getAddress()
+	newP.requestType = "FT"
+	newP.data = formatFT(abs(recvIndex - n.blockchain.getLatestIndex()))
+	recvP, err := n.server.SR1(newP)
+	if err != nil {
+		return false, err
+	}
+	if recvP.requestType != "B" {
+		return false, errors.New("Invalid Request Type")
+	}
+	blocks := unformatBlocks(recvP.data)
+	if blocks[0].hash != n.blockchain.getLatestHash() {
+		return true, nil
+	}
+	for _, v := range blocks {
+		n.blockchain.addBlock(v)
+	}
+	return false, nil
 }
 
 // compareSCM compares by Blockchain Sync Protocol (refer to protocol doc):
@@ -202,10 +236,21 @@ func (n *Node) handleSCM(request *Packet) {
 // 		returns 0 if scenario 2.i
 // 		returns 0 if scenario 2.ii.a
 // 		returns 1 if scenario 2.ii.b
-// 		returns 2 if scenario 3.i
-// 		returns 3 if scenario 3.ii
+// 		returns 2 if scenario 3
 func (n *Node) compareSCM(index int, hash string) int {
-	return 0
+	currIndex := n.blockchain.getLatestIndex()
+	currHash := n.blockchain.getLatestHash()
+	switch {
+	case index < currIndex:
+		return 0
+	case index == currIndex && hash == currHash:
+		return 0
+	case index == currIndex && currHash > hash:
+		return 0
+	case index == currIndex && currHash < hash:
+		return 1
+	}
+	return 2
 }
 
 // handleFT handles all FT requests

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"net"
 	"sync"
@@ -68,12 +66,9 @@ func (n *NodeServer) handlePeer(conn *net.UDPConn) {
 		fmt.Print(err)
 		return
 	}
-	var p Packet
-	buffer := bytes.NewBuffer(recvBytes[:length])
-	decoder := gob.NewDecoder(buffer)
-	decoder.Decode(&p)
+	p := toPacket(recvBytes[:length])
 	n.addPeer(address)
-	n.recvChannel <- &p
+	n.recvChannel <- p
 }
 
 // addPeer calls doesPeerExist and adds the address to Peers if the address can not be found in there
@@ -131,4 +126,38 @@ func (n *NodeServer) sendToPeer() {
 		}
 		conn.Close()
 	}
+}
+
+// SR1 sends and recieves 1 Packet
+func (n *NodeServer) SR1(p *Packet) (*Packet, error) {
+	dstAddr, err := net.ResolveUDPAddr(networkProtocol, p.dstAddress)
+	if err != nil {
+		return nil, err
+	}
+	srcAddr, err := net.ResolveUDPAddr(networkProtocol, n.address)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := net.DialUDP(networkProtocol, srcAddr, dstAddr)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	_, err = conn.Write(p.bytes())
+	if err != nil {
+		fmt.Println(err)
+	}
+	recvBytes := make([]byte, 4096)
+	length, _, err := conn.ReadFromUDP(recvBytes)
+	if err != nil {
+		return nil, err
+	}
+	return toPacket(recvBytes[:length]), nil
+}
+
+func (n *NodeServer) getAddress() string {
+	n.mutex.Lock()
+	address := n.address
+	n.mutex.Unlock()
+	return address
 }
