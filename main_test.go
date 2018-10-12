@@ -96,27 +96,31 @@ func TestMine(t *testing.T) {
 }
 
 func TestSendToPeer(t *testing.T) {
-	var srvr NodeServer
-	dataToSend := make(chan *Packet)
-	srvr.sendChannel = dataToSend
-	go srvr.sendToPeer()
-	addr, err := net.ResolveUDPAddr("udp4", "127.0.0.1:2323")
+	srvr := NodeServer{
+		address: "127.0.0.1:2323",
+		mutex:&sync.Mutex{},
+		sendChannel: make(chan *Packet),
+	}
+	
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:2323")
 	if err != nil {
 		t.Error(err)
 	}
+	go srvr.sendToPeer()
 	p := &Packet{
 		dstAddress: addr.String(),
 		srcAddress: "127.0.0.1:1234",
 		data:       []byte("hello"),
 	}
-	conn, err := net.ListenUDP("udp", addr)
-	dataToSend <- p
+	listener, err := net.Listen("tcp", addr.String())
+	conn, err := listener.Accept()
 	if err != nil {
 		t.Error(err)
 	}
 	defer conn.Close()
+	srvr.sendChannel <- p
 	inputBytes := make([]byte, 4096)
-	_, _, err = conn.ReadFromUDP(inputBytes)
+	_, err = conn.Read(inputBytes)
 	if err != nil {
 		t.Error(err)
 	}
