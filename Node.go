@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -19,7 +18,7 @@ type Node struct {
 	transactionPool *TransactionPool
 	server          *NodeServer
 	recvChannel     chan *Packet
-	sendChannel     chan *Packet
+	scmChannel      chan *Packet
 	mutex           *sync.Mutex
 }
 
@@ -38,8 +37,8 @@ func (n *Node) init() {
 	}
 	n.pubKey = n.privKey.PublicKey
 	n.recvChannel = make(chan *Packet)
-	n.sendChannel = make(chan *Packet)
-	n.server.init(settings.Address, n.recvChannel, n.sendChannel)
+	n.scmChannel = make(chan *Packet)
+	n.server.init(n, settings.Address, n.recvChannel, n.scmChannel, n.privKey)
 	n.blockchain.init()
 	n.transactionPool.init()
 }
@@ -58,13 +57,13 @@ func (n *Node) firstInit() {
 	n.blockchain.firstInit()
 	n.transactionPool.firstInit()
 	n.recvChannel = make(chan *Packet)
-	n.sendChannel = make(chan *Packet)
+	n.scmChannel = make(chan *Packet)
 	IP, err := getIPAddress()
 	if err != nil {
 		fmt.Print(err)
 		return
 	}
-	n.server.firstInit(IP, n.recvChannel, n.sendChannel)
+	n.server.firstInit(n, IP, n.recvChannel, n.scmChannel, n.privKey)
 	n.blockchain.firstInit()
 	// update blockchain + transactionPool
 	n.saveData()
@@ -115,7 +114,7 @@ func (n *Node) mine() bool {
 		}
 	}
 	block.transactions = transactionsToMake
-	block.timestamp = getCurrentMillis()
+	block.timestamp = GetCurrentMillis()
 	block.index = n.blockchain.getLatestIndex() + 1
 	block.prevHash = n.blockchain.getLatestHash()
 	var counter int64
@@ -163,7 +162,7 @@ func (n *Node) makeTransaction(recipient ecdsa.PublicKey, amount int) bool {
 	t.amount = amount
 	t.recipientKey = recipient
 	t.senderKey = n.pubKey
-	t.timestamp = getCurrentMillis()
+	t.timestamp = GetCurrentMillis()
 	t.hashTransaction()
 	err := t.sign(n.privKey)
 	if err != nil {
@@ -173,136 +172,27 @@ func (n *Node) makeTransaction(recipient ecdsa.PublicKey, amount int) bool {
 	return true
 }
 
-// handleSCM handles every SCM
-func (n *Node) handleSCM(request *Packet) {
-	data := request.data
-	index, hash, err := unformatSCM(data)
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
-	res := n.compareSCM(index, hash)
-	switch res {
-	case 0:
-		return
-	case 1:
-		var p *Packet
-		p.dstAddress = request.srcAddress
-		p.srcAddress = n.server.getAddress()
-		p.requestType = "FT"
-		p.data = formatFT(index)
-		n.sendChannel <- p
-	case 2:
-		scenario, err := n.compareBlockchain(request, index)
-		if err != nil {
-			fmt.Print(err)
-			return
-		}
-		if scenario {
-
-		}
-	}
-}
-
-// compareBlockchain compares the current blockchain with one from another node
-// the returned bool is for the different scenarios (refer to protocol doc):
-//	false - scenario 3.i
-//  true - scenario 3.ii
-func (n *Node) compareBlockchain(p *Packet, recvIndex int) (bool, error) {
-	var newP *Packet
-	newP.dstAddress = p.srcAddress
-	newP.srcAddress = n.server.getAddress()
-	newP.requestType = "FT"
-	newP.data = formatFT(abs(recvIndex - n.blockchain.getLatestIndex()))
-	recvP, err := n.server.SR1(newP)
-	if err != nil {
-		return false, err
-	}
-	if recvP.requestType != "B" {
-		return false, errors.New("Invalid Request Type")
-	}
-	blocks := unformatBlocks(recvP.data)
-	if blocks[0].hash != n.blockchain.getLatestHash() {
-		return true, nil
-	}
-	for _, v := range blocks {
-		n.blockchain.addBlock(v)
-	}
-	return false, nil
-}
-
-// compareSCM compares by Blockchain Sync Protocol (refer to protocol doc):
-// 		returns 0 if scenario 1
-// 		returns 0 if scenario 2.i
-// 		returns 0 if scenario 2.ii.a
-// 		returns 1 if scenario 2.ii.b
-// 		returns 2 if scenario 3
-func (n *Node) compareSCM(index int, hash string) int {
-	currIndex := n.blockchain.getLatestIndex()
-	currHash := n.blockchain.getLatestHash()
-	switch {
-	case index < currIndex:
-		return 0
-	case index == currIndex && hash == currHash:
-		return 0
-	case index == currIndex && currHash > hash:
-		return 0
-	case index == currIndex && currHash < hash:
-		return 1
-	}
-	return 2
-}
-
-// handleFT handles all FT requests
-func (n *Node) handleFT(request *Packet) {
-}
-
-// handleIS handles all IS requests
-func (n *Node) handleIS(request *Packet) {
-}
-
-// handleIS handles all NT requests
-func (n *Node) handleNT(request *Packet) {
-}
-
-// handleSTPM handles all STPMs
-func (n *Node) handleSTPM(request *Packet) {
-}
-
-// handleBlocks handleRecieved blocks from peers
-func (n *Node) handleBlocks(request *Packet) {
-
-}
-
-// getServerData checks to see if a request is received from the NodeServer
-func (n *Node) getServerData() {
+func (n *Node) makeSCM() {
 	for {
-		data := <-n.recvChannel
-		go n.handleRequest(data)
+		time.Sleep(5 * time.Second)
+		p := &Packet{
+			requestType: "SCM",
+			data:        FormatSCM(n.blockchain.getLatestIndex(), n.blockchain.getLatestHash()),
+		}
+		n.scmChannel <- p
 	}
 }
 
-// handleRequest handles the requests from the dataQueue in the NodeServer
-func (n *Node) handleRequest(request *Packet) {
-	switch request.requestType {
-	case "SCM":
-		n.handleSCM(request)
-	case "FT":
-		n.handleFT(request)
-	case "IS":
-		n.handleIS(request)
-	case "NT":
-		n.handleNT(request)
-	case "STPM":
-		n.handleSTPM(request)
-	case "B":
-		n.handleBlocks(request)
-	default:
-		fmt.Print("Unknown request type.")
+/*
+CompareSCM compares by Blockchain Sync Protocol (refer to protocol doc):
+returns 0 if scenario 1
+returns 0 if scenario 2
+returns the difference between indexes otherwise
+*/
+func (n *Node) CompareSCM(index int) int {
+	currIndex := n.blockchain.getLatestIndex()
+	if index <= currIndex {
+		return 0
 	}
-}
-
-// getCurrentMillis returns the current time in millisecs
-func getCurrentMillis() int64 {
-	return time.Now().UnixNano() / int64(time.Millisecond)
+	return index - currIndex
 }

@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"net"
 	"sync"
 	"testing"
 )
@@ -92,40 +91,5 @@ func TestMine(t *testing.T) {
 		if node.blockchain.length() != 2 || node.blockchain.blocks[1].index != expected.index || node.blockchain.blocks[1].prevHash != expected.prevHash {
 			t.Error("Invalid block mined")
 		}
-	}
-}
-
-func TestSendToPeer(t *testing.T) {
-	srvr := NodeServer{
-		address: "127.0.0.1:2323",
-		mutex:&sync.Mutex{},
-		sendChannel: make(chan *Packet),
-	}
-	
-	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:2323")
-	if err != nil {
-		t.Error(err)
-	}
-	go srvr.sendToPeer()
-	p := &Packet{
-		dstAddress: addr.String(),
-		srcAddress: "127.0.0.1:1234",
-		data:       []byte("hello"),
-	}
-	listener, err := net.Listen("tcp", addr.String())
-	conn, err := listener.Accept()
-	if err != nil {
-		t.Error(err)
-	}
-	defer conn.Close()
-	srvr.sendChannel <- p
-	inputBytes := make([]byte, 4096)
-	_, err = conn.Read(inputBytes)
-	if err != nil {
-		t.Error(err)
-	}
-	recvP := toPacket(inputBytes)
-	if string(recvP.data) != "hello" {
-		t.Errorf("Was expecting to receive \"hello\", instead got \"%s\"", string(recvP.data))
 	}
 }
