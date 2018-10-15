@@ -41,6 +41,8 @@ func (n *Node) init() {
 	n.server.init(n, settings.Address, n.recvChannel, n.scmChannel, n.privKey)
 	n.blockchain.init()
 	n.transactionPool.init()
+
+	//go n.makeSCM()
 }
 
 //firstInit initiates the Node for the first time, and saves to a json settings file

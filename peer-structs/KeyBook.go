@@ -11,8 +11,8 @@ type KeyBook struct {
 }
 
 // NewKeyBook returns a new empty KeyBook
-func NewKeyBook() KeyBook {
-	return KeyBook{keys: make(map[p2pPeer.ID]p2pCrypto.PubKey)}
+func NewKeyBook() *KeyBook {
+	return &KeyBook{keys: make(map[p2pPeer.ID]p2pCrypto.PubKey)}
 }
 
 // PubKey stores the public key of a peer.

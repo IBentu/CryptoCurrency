@@ -14,8 +14,8 @@ type AddrBook struct {
 }
 
 // NewAddrBook creates a new AddrBook struct
-func NewAddrBook() AddrBook {
-	return AddrBook{addrs: make(map[p2pPeer.ID][]ma.Multiaddr)}
+func NewAddrBook() *AddrBook {
+	return &AddrBook{addrs: make(map[p2pPeer.ID][]ma.Multiaddr)}
 }
 
 // AddAddr calls AddAddrs(p, []ma.Multiaddr{addr}, ttl)

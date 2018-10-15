@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"sync"
 )
 
@@ -56,6 +57,12 @@ func (bc *Blockchain) addBlock(b *Block) {
 	bc.mutex.Unlock()
 }
 
+func (bc *Blockchain) addBlocks(blocks []*Block) {
+	for _, b := range blocks {
+		bc.addBlock(b)
+	}
+}
+
 // isBlockValid validates a block is valid hash-wise and index-wise
 func (bc *Blockchain) isBlockValid(b Block) bool {
 	bc.mutex.Lock()
@@ -77,4 +84,13 @@ func (bc *Blockchain) getBlock(index int) Block {
 	b := bc.blocks[index]
 	bc.mutex.Unlock()
 	return *b
+}
+
+func (bc *Blockchain) compareBlockchains(blocks []*Block) (int, error) {
+	for i := blocks[len(blocks)-1].index; i >= blocks[0].index; i-- {
+		if blocks[i].hash == bc.getLatestHash() {
+			return i, nil
+		}
+	}
+	return 0, errors.New("No Matched Blocks")
 }

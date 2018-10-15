@@ -2,12 +2,26 @@ package main
 
 import (
 	"bytes"
+	"errors"
 )
 
 // Packet is the struct for transferring data between Nodes
 type Packet struct {
 	requestType string
 	data        []byte
+}
+
+var (
+	// ErrPacketType is an error for a packet with the wrong message type
+	ErrPacketType = errors.New("Wrong Packet Type")
+)
+
+// NewPacket returns a new packet
+func NewPacket(request string, data []byte) *Packet {
+	return &Packet{
+		requestType: request,
+		data:        data,
+	}
 }
 
 //  bytes converts the Packet to a slice of bytes

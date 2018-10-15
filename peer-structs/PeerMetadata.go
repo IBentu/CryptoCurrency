@@ -7,8 +7,8 @@ type PeerMetadata struct {
 }
 
 // NewPeerMetadata returns a new PeerMetadata struct
-func NewPeerMetadata() PeerMetadata {
-	return PeerMetadata{}
+func NewPeerMetadata() *PeerMetadata {
+	return &PeerMetadata{}
 }
 
 // Get ...

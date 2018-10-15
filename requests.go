@@ -49,13 +49,13 @@ func UnformatIS(data []byte) (int, error) {
 	return index, nil
 }
 
-// FormatBlocks formats blocks array to byte array
-func FormatBlocks(blocks []*Block) []byte {
+// FormatBP formats blocks array to byte array
+func FormatBP(blocks []*Block) []byte {
 	return []byte{}
 }
 
-// UnformatBlocks formats byte array to blocks array
-func UnformatBlocks(data []byte) []*Block {
+// UnformatBP formats byte array to blocks array
+func UnformatBP(data []byte) []*Block {
 	return []*Block{}
 }
 
