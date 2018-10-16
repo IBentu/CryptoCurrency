@@ -124,7 +124,7 @@ func TestOpenStream(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	s, err := n1.openStream(fmt.Sprintf("/ip4/127.0.0.1/tcp/2000/ipfs/%s", n1.host.ID().Pretty())) // self dial error...
+	_, err = n1.openStream(fmt.Sprintf("/ip4/127.0.0.1/tcp/2000/ipfs/%s", n1.host.ID().Pretty())) // self dial error...
 	if err != nil {
 		t.Error(err)
 	}
