@@ -4,8 +4,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"fmt"
 	"sync"
 	"testing"
+
+	pstore "github.com/libp2p/go-libp2p-peerstore"
+	pstoremem "github.com/libp2p/go-libp2p-peerstore/pstoremem"
 )
 
 func TestCheckBalance(t *testing.T) {
@@ -92,4 +96,37 @@ func TestMine(t *testing.T) {
 			t.Error("Invalid block mined")
 		}
 	}
+}
+
+func TestOpenStream(t *testing.T) {
+	n1 := NodeServer{
+		mutex:   &sync.Mutex{},
+		address: "127.0.0.1",
+		peers:   pstore.NewPeerstore(pstoremem.NewKeyBook(), pstoremem.NewAddrBook(), pstoremem.NewPeerMetadata()),
+	}
+	n1pKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Error(err)
+	}
+	err = n1.newHost(2000, n1pKey)
+	if err != nil {
+		t.Error(err)
+	}
+	n2 := NodeServer{
+		mutex:   &sync.Mutex{},
+		address: "127.0.0.1",
+	}
+	n2pKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Error(err)
+	}
+	err = n2.newHost(2001, n2pKey)
+	if err != nil {
+		t.Error(err)
+	}
+	s, err := n1.openStream(fmt.Sprintf("/ip4/127.0.0.1/tcp/2000/ipfs/%s", n1.host.ID().Pretty())) // self dial error...
+	if err != nil {
+		t.Error(err)
+	}
+
 }

@@ -7,25 +7,25 @@ import (
 	"fmt"
 	"sync"
 
-	peerStructs "github.com/CryptoCurrency/peer-structs"
 	libp2p "github.com/libp2p/go-libp2p"
-	p2pCrypto "github.com/libp2p/go-libp2p-crypto"
-	p2pHost "github.com/libp2p/go-libp2p-host"
-	p2pNet "github.com/libp2p/go-libp2p-net"
-	p2pPeer "github.com/libp2p/go-libp2p-peer"
-	p2pPeerstore "github.com/libp2p/go-libp2p-peerstore"
+	crypto "github.com/libp2p/go-libp2p-crypto"
+	host "github.com/libp2p/go-libp2p-host"
+	net "github.com/libp2p/go-libp2p-net"
+	peer "github.com/libp2p/go-libp2p-peer"
+	pstore "github.com/libp2p/go-libp2p-peerstore"
+	pstoremem "github.com/libp2p/go-libp2p-peerstore/pstoremem"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
 // NodeServer is the server of the node and it is responsible for communication between nodes
 type NodeServer struct {
 	node        *Node
-	peers       p2pPeerstore.Peerstore
+	peers       pstore.Peerstore
 	address     string
 	mutex       *sync.Mutex
 	recvChannel chan *Packet
 	scmChannel  chan *Packet
-	host        p2pHost.Host
+	host        host.Host
 }
 
 const (
@@ -58,7 +58,7 @@ func (n *NodeServer) init(node *Node, address string, recvChannel, sendChannel c
 func (n *NodeServer) firstInit(node *Node, address string, recvChannel, scmChannel chan *Packet, privKey *ecdsa.PrivateKey) {
 	n.node = node
 	n.mutex = &sync.Mutex{}
-	n.peers = p2pPeerstore.NewPeerstore(peerStructs.NewKeyBook(), peerStructs.NewAddrBook(), peerStructs.NewPeerMetadata())
+	n.peers = pstore.NewPeerstore(pstoremem.NewKeyBook(), pstoremem.NewAddrBook(), pstoremem.NewPeerMetadata())
 	n.address = address
 	n.recvChannel = recvChannel
 	n.scmChannel = scmChannel
@@ -75,7 +75,7 @@ func (n *NodeServer) firstInit(node *Node, address string, recvChannel, scmChann
 
 func (n *NodeServer) newHost(listenPort int, privKey *ecdsa.PrivateKey) error {
 
-	priv, _, err := p2pCrypto.ECDSAKeyPairFromKey(privKey)
+	priv, _, err := crypto.ECDSAKeyPairFromKey(privKey)
 	if err != nil {
 		return err
 	}
@@ -83,26 +83,26 @@ func (n *NodeServer) newHost(listenPort int, privKey *ecdsa.PrivateKey) error {
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", listenPort)),
 		libp2p.Identity(priv),
 	}
-	host, err := libp2p.New(context.Background(), opts...)
+	hst, err := libp2p.New(context.Background(), opts...)
 	if err != nil {
 		return err
 	}
 
 	// Build host multiaddress
-	hostAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", host.ID().Pretty()))
-	addr := host.Addrs()[0]
+	hostAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", hst.ID().Pretty()))
+	addr := hst.Addrs()[0]
 	fullAddr := addr.Encapsulate(hostAddr)
 	fmt.Printf("I am %s\n", fullAddr)
 
 	n.mutex.Lock()
-	n.host = host
+	n.host = hst
 	n.host.SetStreamHandler(P2Pprotocol, n.HandleStream)
 	n.mutex.Unlock()
 
 	return nil
 }
 
-func (n *NodeServer) openStream(target string) (p2pNet.Stream, error) {
+func (n *NodeServer) openStream(target string) (net.Stream, error) {
 	// The following code extracts target's peer ID from the
 	// given multiaddress
 	ipfsaddr, err := ma.NewMultiaddr(target)
@@ -115,7 +115,7 @@ func (n *NodeServer) openStream(target string) (p2pNet.Stream, error) {
 		return nil, err
 	}
 
-	peerid, err := p2pPeer.IDB58Decode(pid)
+	peerid, err := peer.IDB58Decode(pid)
 	if err != nil {
 		return nil, err
 	}
@@ -123,12 +123,13 @@ func (n *NodeServer) openStream(target string) (p2pNet.Stream, error) {
 	// Decapsulate the /ipfs/<peerID> part from the target
 	// /ip4/<a.b.c.d>/ipfs/<peer> becomes /ip4/<a.b.c.d>
 	targetPeerAddr, _ := ma.NewMultiaddr(
-		fmt.Sprintf("/ipfs/%s", p2pPeer.IDB58Encode(peerid)))
+		fmt.Sprintf("/ipfs/%s", peer.IDB58Encode(peerid)))
 	targetAddr := ipfsaddr.Decapsulate(targetPeerAddr)
 
-	// We have a peer ID and a targetAddr so we add it to the peerstore
+	// We have a peer ID and a targetAddr so we add it to the pstore
 	// so LibP2P knows how to contact it
-	n.peers.AddAddr(peerid, targetAddr, p2pPeerstore.PermanentAddrTTL)
+	n.peers.AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
+	n.host.Peerstore().AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
 
 	fmt.Print("opening stream")
 	// make a new stream from host B to host A
@@ -142,7 +143,7 @@ func (n *NodeServer) openStream(target string) (p2pNet.Stream, error) {
 }
 
 // HandleStream handles an incoming peer stream
-func (n *NodeServer) HandleStream(s p2pNet.Stream) {
+func (n *NodeServer) HandleStream(s net.Stream) {
 	// Create a buffer stream for non blocking read and write.
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 
