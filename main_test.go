@@ -147,7 +147,7 @@ func TestOpenStreamSide1(t *testing.T) {
 		t.Error(err)
 	}
 	
-	_, err = node.openStream(fmt.Sprintf("/ip4/10.0.0.130/tcp/2000/ipfs/%s", n1.host.ID().Pretty())) // self dial error...
+	_, err = node.openStream(fmt.Sprintf("/ip4/10.0.0.130/tcp/2000/ipfs/%s", n1.host.ID().Pretty()))
 	if err != nil {
 		t.Error(err)
 	}
@@ -168,5 +168,5 @@ func TestOpenStreamSide2(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	n1.host.SetStreamHandler(P2Pprotocol, func(s net.Stream){})
+	n1.host.SetStreamHandler(P2Pprotocol, func(s net.Stream){fmt.Print("Stream Connected!")})
 }
