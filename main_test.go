@@ -10,6 +10,7 @@ import (
 
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	pstoremem "github.com/libp2p/go-libp2p-peerstore/pstoremem"
+	net "github.com/libp2p/go-libp2p-net"
 )
 
 func TestCheckBalance(t *testing.T) {
@@ -129,4 +130,43 @@ func TestOpenStream(t *testing.T) {
 		t.Error(err)
 	}
 
+}
+
+func TestOpenStreamSide1(t *testing.T) {
+	node := NodeServer{
+		mutex:   &sync.Mutex{},
+		address: "10.0.0.129",
+		peers:   pstore.NewPeerstore(pstoremem.NewKeyBook(), pstoremem.NewAddrBook(), pstoremem.NewPeerMetadata()),
+	}
+	pKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Error(err)
+	}
+	err = n1.newHost(2000, n1pKey)
+	if err != nil {
+		t.Error(err)
+	}
+	
+	_, err = node.openStream(fmt.Sprintf("/ip4/10.0.0.130/tcp/2000/ipfs/%s", n1.host.ID().Pretty())) // self dial error...
+	if err != nil {
+		t.Error(err)
+	}
+
+}
+
+func TestOpenStreamSide2(t *testing.T) {
+	node := NodeServer{
+		mutex:   &sync.Mutex{},
+		address: "10.0.0.130",
+		peers:   pstore.NewPeerstore(pstoremem.NewKeyBook(), pstoremem.NewAddrBook(), pstoremem.NewPeerMetadata()),
+	}
+	pKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Error(err)
+	}
+	err = n1.newHost(2000, n1pKey)
+	if err != nil {
+		t.Error(err)
+	}
+	n1.host.SetStreamHandler(P2Pprotocol, func(s net.Stream){})
 }
