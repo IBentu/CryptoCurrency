@@ -142,12 +142,12 @@ func TestOpenStreamSide1(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = n1.newHost(2000, n1pKey)
+	err = node.newHost(2000, pKey)
 	if err != nil {
 		t.Error(err)
 	}
 	
-	_, err = node.openStream(fmt.Sprintf("/ip4/10.0.0.130/tcp/2000/ipfs/%s", n1.host.ID().Pretty()))
+	_, err = node.openStream(fmt.Sprintf("/ip4/10.0.0.130/tcp/2000/ipfs/%s", node.host.ID().Pretty()))
 	if err != nil {
 		t.Error(err)
 	}
@@ -164,9 +164,10 @@ func TestOpenStreamSide2(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = n1.newHost(2000, n1pKey)
+	err = node.newHost(2000, pKey)
 	if err != nil {
 		t.Error(err)
 	}
-	n1.host.SetStreamHandler(P2Pprotocol, func(s net.Stream){fmt.Print("Stream Connected!")})
+	node.host.SetStreamHandler(P2Pprotocol, func(s net.Stream){fmt.Print("Stream Connected!")})
+	for {}
 }
