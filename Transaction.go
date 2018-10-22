@@ -112,3 +112,8 @@ func unformatPublicKey(data []byte) ecdsa.PublicKey {
 	key.Y = y
 	return key
 }
+
+// Equals compares two Transactions
+func (t *Transaction) Equals(t2 *Transaction) bool {
+	return t.hash == t2.hash
+}

@@ -19,6 +19,7 @@ type Node struct {
 	server          *NodeServer
 	recvChannel     chan *Packet
 	scmChannel      chan *Packet
+	stpmChannel     chan *Packet
 	mutex           *sync.Mutex
 }
 
@@ -38,11 +39,13 @@ func (n *Node) init() {
 	n.pubKey = n.privKey.PublicKey
 	n.recvChannel = make(chan *Packet)
 	n.scmChannel = make(chan *Packet)
-	n.server.init(n, settings.Address, n.recvChannel, n.scmChannel, n.privKey)
+	n.stpmChannel = make(chan *Packet)
+	n.server.init(n, settings.Address, n.recvChannel, n.scmChannel, n.stpmChannel, n.privKey)
 	n.blockchain.init()
 	n.transactionPool.init()
 
 	//go n.makeSCM()
+	//go n.makeSTPM()
 }
 
 //firstInit initiates the Node for the first time, and saves to a json settings file
@@ -60,12 +63,13 @@ func (n *Node) firstInit() {
 	n.transactionPool.firstInit()
 	n.recvChannel = make(chan *Packet)
 	n.scmChannel = make(chan *Packet)
+	n.stpmChannel = make(chan *Packet)
 	IP, err := getIPAddress()
 	if err != nil {
 		fmt.Print(err)
 		return
 	}
-	n.server.firstInit(n, IP, n.recvChannel, n.scmChannel, n.privKey)
+	n.server.firstInit(n, IP, n.recvChannel, n.scmChannel, n.stpmChannel, n.privKey)
 	n.blockchain.firstInit()
 	// update blockchain + transactionPool
 	n.saveData()
@@ -177,10 +181,7 @@ func (n *Node) makeTransaction(recipient ecdsa.PublicKey, amount int) bool {
 func (n *Node) makeSCM() {
 	for {
 		time.Sleep(5 * time.Second)
-		p := &Packet{
-			requestType: "SCM",
-			data:        FormatSCM(n.blockchain.getLatestIndex(), n.blockchain.getLatestHash()),
-		}
+		p := NewPacket(SCM, FormatSCM(n.blockchain.getLatestIndex(), n.blockchain.getLatestHash()))
 		n.scmChannel <- p
 	}
 }
@@ -197,4 +198,12 @@ func (n *Node) CompareSCM(index int) int {
 		return 0
 	}
 	return index - currIndex
+}
+
+func (n *Node) makeSTMP() {
+	for {
+		time.Sleep(5 * time.Second)
+		p := NewPacket(STPM, n.transactionPool.formatSTPM())
+		n.stpmChannel <- p
+	}
 }

@@ -25,6 +25,7 @@ type NodeServer struct {
 	mutex       *sync.Mutex
 	recvChannel chan *Packet
 	scmChannel  chan *Packet
+	stpmChannel chan *Packet
 	host        host.Host
 }
 
@@ -52,16 +53,17 @@ const (
 	BP = "BP"
 )
 
-func (n *NodeServer) init(node *Node, address string, recvChannel, sendChannel chan *Packet, privKey *ecdsa.PrivateKey) {
+func (n *NodeServer) init(node *Node, address string, recvChannel, sendChannel, stmpChannel chan *Packet, privKey *ecdsa.PrivateKey) {
 }
 
-func (n *NodeServer) firstInit(node *Node, address string, recvChannel, scmChannel chan *Packet, privKey *ecdsa.PrivateKey) {
+func (n *NodeServer) firstInit(node *Node, address string, recvChannel, scmChannel, stpmChannel chan *Packet, privKey *ecdsa.PrivateKey) {
 	n.node = node
 	n.mutex = &sync.Mutex{}
 	n.peers = pstore.NewPeerstore(pstoremem.NewKeyBook(), pstoremem.NewAddrBook(), pstoremem.NewPeerMetadata())
 	n.address = address
 	n.recvChannel = recvChannel
 	n.scmChannel = scmChannel
+	n.stpmChannel = stpmChannel
 	err := n.newHost(ListenPort, privKey)
 	if err != nil {
 		fmt.Print(err.Error())
@@ -165,6 +167,19 @@ func (n *NodeServer) writeStream(rw *bufio.ReadWriter) {
 			n.mutex.Unlock()
 		}
 	}()
+
+	go func() {
+		// sends STPM to peer every few seconds
+		for {
+			stpm := <-n.stpmChannel
+			n.mutex.Lock()
+			_, err := rw.Write(stpm.bytes())
+			if err != nil {
+				fmt.Print(err)
+			}
+			n.mutex.Unlock()
+		}
+	}()
 }
 
 func (n *NodeServer) readStream(rw *bufio.ReadWriter) {
@@ -260,6 +275,16 @@ func (n *NodeServer) readStream(rw *bufio.ReadWriter) {
 
 			}
 		case STPM:
+			trans, err := UnformatSTPM(data)
+			if err != nil {
+				fmt.Print(err.Error())
+				continue
+			}
+			for _, v := range trans {
+				if !n.node.transactionPool.DoesExists(v) {
+					n.node.transactionPool.addTransaction(v)
+				}
+			}
 		case NT:
 		case PA:
 		default:

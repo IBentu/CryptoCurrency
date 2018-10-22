@@ -53,7 +53,8 @@ func (tp *TransactionPool) formatSTPM() []byte {
 	return data
 }
 
-func unformatSTPM(data []byte) ([]*Transaction, error) {
+//UnformatSTPM unfomrmats []byte to a slice of Transactions
+func UnformatSTPM(data []byte) ([]*Transaction, error) {
 	splat := bytes.Split(data, []byte("|\000"))
 	trans := make([]*Transaction, 0)
 	for _, v := range splat {
@@ -64,4 +65,17 @@ func unformatSTPM(data []byte) ([]*Transaction, error) {
 		trans = append(trans, t)
 	}
 	return trans, nil
+}
+
+// DoesExists return true if t exists in the TransactionPool and false otherwise
+func (tp *TransactionPool) DoesExists(t *Transaction) bool {
+	tp.mutex.Lock()
+	trans := tp.transactions
+	tp.mutex.Unlock()
+	for _, v := range trans {
+		if t.Equals(v) {
+			return true
+		}
+	}
+	return false
 }
