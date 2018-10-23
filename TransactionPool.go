@@ -48,7 +48,11 @@ func (tp *TransactionPool) addTransaction(t *Transaction) {
 func (tp *TransactionPool) formatSTPM() []byte {
 	var data []byte
 	for _, v := range tp.transactions {
-		data = append(append(data, v.formatTransaction()...), []byte("|\000")...)
+		bytes, err := v.Format()
+		if err != nil {
+			continue
+		}
+		data = append(append(data, bytes...), []byte("|\000")...)
 	}
 	return data
 }
@@ -58,9 +62,10 @@ func UnformatSTPM(data []byte) ([]*Transaction, error) {
 	splat := bytes.Split(data, []byte("|\000"))
 	trans := make([]*Transaction, 0)
 	for _, v := range splat {
-		t, err := unformatTransaction(v)
+		t := &Transaction{}
+		t, err := UnformatTransaction(v)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		trans = append(trans, t)
 	}

@@ -38,3 +38,18 @@ func (b *Block) verifyPOW() bool {
 	}
 	return true
 }
+
+// ToBytes converts a Block to an array of bytes
+func (b *Block) ToBytes() ([]byte, error) {
+	return b.MarshalJSON()
+}
+
+// ToBlock converts an array of bytes and returns a pointer to a Block
+func ToBlock(data []byte) (*Block, error) {
+	b := &Block{}
+	err := b.UnmarshalJSON(data)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}

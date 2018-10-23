@@ -51,14 +51,28 @@ func UnformatIS(data []byte) (int, error) {
 
 // FormatBP formats blocks array to byte array
 func FormatBP(blocks []*Block) []byte {
-	return []byte{}
+	var data []byte
+	for _, v := range blocks {
+		bytes, err := v.ToBytes()
+		if err != nil {
+			continue
+		}
+		data = append(append(data, bytes...), []byte("|\000")...)
+	}
+	return data
 }
 
 // UnformatBP formats byte array to blocks array
-func UnformatBP(data []byte) []*Block {
-	return []*Block{}
-}
-
-// UnformatNT formats ...
-func UnformatNT() {
+func UnformatBP(data []byte) ([]*Block, error) {
+	splat := bytes.Split(data, []byte("|\000"))
+	blocks := make([]*Block, 0)
+	for _, v := range splat {
+		b := &Block{}
+		b, err := ToBlock(v)
+		if err != nil {
+			continue
+		}
+		blocks = append(blocks, b)
+	}
+	return blocks, nil
 }

@@ -223,7 +223,11 @@ func (n *NodeServer) readStream(rw *bufio.ReadWriter) {
 					fmt.Print(ErrPacketType.Error())
 					continue
 				}
-				recvBlockchain := UnformatBP(recvP.data)
+				recvBlockchain, err := UnformatBP(recvP.data)
+				if err != nil {
+					fmt.Print(err.Error())
+					continue
+				}
 				if recvBlockchain[0].hash == n.node.blockchain.getLatestHash() {
 					n.node.blockchain.addBlocks(recvBlockchain[1:])
 				} else {
@@ -244,7 +248,11 @@ func (n *NodeServer) readStream(rw *bufio.ReadWriter) {
 						fmt.Print(ErrPacketType.Error())
 						continue
 					}
-					recvBlockchain := UnformatBP(recvP.data)
+					recvBlockchain, err := UnformatBP(recvP.data)
+					if err != nil {
+						fmt.Print(err.Error())
+						continue
+					}
 					prevBlocks = recvBlockchain
 					var sameIndex int
 					sameIndex, err = n.node.blockchain.compareBlockchains(recvBlockchain)
@@ -265,7 +273,11 @@ func (n *NodeServer) readStream(rw *bufio.ReadWriter) {
 							fmt.Print(ErrPacketType.Error())
 							continue
 						}
-						recvBlockchain := UnformatBP(recvP.data)
+						recvBlockchain, err := UnformatBP(recvP.data)
+						if err != nil {
+							fmt.Print(err.Error())
+							continue
+						}
 						prevBlocks = append(prevBlocks, recvBlockchain...)
 						sameIndex, err = n.node.blockchain.compareBlockchains(recvBlockchain)
 					}
@@ -285,7 +297,6 @@ func (n *NodeServer) readStream(rw *bufio.ReadWriter) {
 					n.node.transactionPool.addTransaction(v)
 				}
 			}
-		case NT:
 		case PA:
 		default:
 			fmt.Print(ErrPacketType.Error())
