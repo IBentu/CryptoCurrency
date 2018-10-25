@@ -8,9 +8,9 @@ import (
 	"sync"
 	"testing"
 
+	net "github.com/libp2p/go-libp2p-net"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	pstoremem "github.com/libp2p/go-libp2p-peerstore/pstoremem"
-	net "github.com/libp2p/go-libp2p-net"
 )
 
 func TestCheckBalance(t *testing.T) {
@@ -146,7 +146,7 @@ func TestOpenStreamSide1(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	
+
 	_, err = node.openStream(fmt.Sprintf("/ip4/10.0.0.130/tcp/2000/ipfs/%s", node.host.ID().Pretty()))
 	if err != nil {
 		t.Error(err)
@@ -168,6 +168,45 @@ func TestOpenStreamSide2(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	node.host.SetStreamHandler(P2Pprotocol, func(s net.Stream){fmt.Print("Stream Connected!")})
-	for {}
+	c := make(chan bool)
+	node.host.SetStreamHandler(P2Pprotocol, func(s net.Stream) { fmt.Print("Stream Connected!"); c <- true })
+	<-c
+}
+
+
+func TestTranactionMarshaler(t *testing.T) {
+	tran := Transaction{
+		amount: 30,
+	}
+	b, err := tran.MarshalJSON()
+	if err != nil {
+		t.Error(err)
+	}
+	newT := Transaction{}
+	err = newT.UnmarshalJSON(b)
+	if err != nil {
+		t.Error(err)
+	}
+	if newT.amount != tran.amount {
+		t.Error("Transactions not the same")
+	}
+}
+
+
+func TestBlockMarshaler(t *testing.T) {
+	b := Block{
+		index: 30,
+	}
+	bytes, err := b.MarshalJSON()
+	if err != nil {
+		t.Error(err)
+	}
+	newB := Block{}
+	err = newB.UnmarshalJSON(bytes)
+	if err != nil {
+		t.Error(err)
+	}
+	if newB.index != b.index {
+		t.Error("Blocks not the same")
+	}
 }
