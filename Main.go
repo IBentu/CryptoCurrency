@@ -70,12 +70,12 @@ func checkError(err error) {
 
 // getIPAddress returns the local ip address
 func getIPAddress() (string, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+	conn, err := net.Dial("tcp", "8.8.8.8:80")
 	if err != nil {
 		return "", err
 	}
 	defer conn.Close()
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	localAddr := conn.LocalAddr().(*net.TCPAddr)
 	str := localAddr.String()
 	return str, nil
 }
