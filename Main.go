@@ -42,32 +42,6 @@ func writeJSON(settings *JSONSettings) error {
 	return err
 }
 
-// JSONSettings is a data type for the json settings file
-type JSONSettings struct {
-	FirstInit  bool           `json:"FirstInit"`
-	PrivateKey JSONPrivateKey `json:"PrivateKey"`
-	Address    string         `json:"Address"`
-}
-
-// JSONPrivateKey is a data sub-type for the json settings file
-type JSONPrivateKey struct {
-	PublicKey JSONPublicKey `json:"PublicKey"`
-	D         int64         `json:"D"`
-}
-
-// JSONPublicKey is a data sub-type for the json settings file
-type JSONPublicKey struct {
-	X int64 `json:"X"`
-	Y int64 `json:"Y"`
-}
-
-// checkError calls panic() with the recieved error in case err != nil
-func checkError(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 // getIPAddress returns the local ip address
 func getIPAddress() (string, error) {
 	conn, err := net.Dial("tcp", "8.8.8.8:80")
