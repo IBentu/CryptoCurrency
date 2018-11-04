@@ -40,8 +40,11 @@ func (n *Node) init() {
 	n.recvChannel = make(chan *Packet)
 	n.scmChannel = make(chan *Packet)
 	n.stpmChannel = make(chan *Packet)
+	n.server = &NodeServer{}
 	n.server.init(n, settings.Address, n.recvChannel, n.scmChannel, n.stpmChannel, n.privKey)
+	n.blockchain = &Blockchain{}
 	n.blockchain.init()
+	n.transactionPool = &TransactionPool{}
 	n.transactionPool.init()
 
 	//go n.makeSCM()

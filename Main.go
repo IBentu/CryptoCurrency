@@ -6,7 +6,7 @@ import (
 	"net"
 )
 
-func main() {
+func main1() {
 	settings, err := readJSON()
 	checkError(err)
 	var node Node

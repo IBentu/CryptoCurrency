@@ -83,6 +83,7 @@ func (n *NodeServer) newHost(listenPort int, privKey *ecdsa.PrivateKey) error {
 	}
 	opts := []libp2p.Option{
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", listenPort)),
+		libp2p.Peerstore(n.peers),
 		libp2p.Identity(priv),
 	}
 	hst, err := libp2p.New(context.Background(), opts...)
