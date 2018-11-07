@@ -72,7 +72,7 @@ func (n *Node) firstInit() {
 		fmt.Print(err)
 		return
 	}
-	n.server.firstInit(n, IP, n.recvChannel, n.scmChannel, n.stpmChannel, n.privKey)
+	n.server.firstInit(n, IP.String(), n.recvChannel, n.scmChannel, n.stpmChannel, n.privKey)
 	n.blockchain.firstInit()
 	// update blockchain + transactionPool
 	n.saveData()

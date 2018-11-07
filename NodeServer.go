@@ -82,7 +82,7 @@ func (n *NodeServer) newHost(listenPort int, privKey *ecdsa.PrivateKey) error {
 		return err
 	}
 	opts := []libp2p.Option{
-		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", listenPort)),
+		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%d", n.address, listenPort)),
 		libp2p.Peerstore(n.peers),
 		libp2p.Identity(priv),
 	}
@@ -134,7 +134,7 @@ func (n *NodeServer) openStream(target string) (net.Stream, error) {
 	n.peers.AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
 	n.host.Peerstore().AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
 
-	fmt.Print("opening stream")
+	fmt.Println("Opening stream...")
 	// make a new stream from host B to host A
 	// it should be handled on host A by the handler we set above because
 	// we use the same /p2p/1.0.0 protocol
@@ -147,6 +147,7 @@ func (n *NodeServer) openStream(target string) (net.Stream, error) {
 
 // HandleStream handles an incoming peer stream
 func (n *NodeServer) HandleStream(s net.Stream) {
+	fmt.Println("Stream connected.")
 	// Create a buffer stream for non blocking read and write.
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 

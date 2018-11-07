@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net"
+	"strings"
 )
 
 func main1() {
@@ -43,13 +45,30 @@ func writeJSON(settings *JSONSettings) error {
 }
 
 // getIPAddress returns the local ip address
-func getIPAddress() (string, error) {
-	conn, err := net.Dial("tcp", "8.8.8.8:80")
+func getIPAddress() (net.IP, error) {
+	ifaces, err := net.Interfaces()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	defer conn.Close()
-	localAddr := conn.LocalAddr().(*net.TCPAddr)
-	str := localAddr.String()
-	return str, nil
+	for _, i := range ifaces {
+		if strings.Index(i.Name, "Wi-Fi") != 0 || strings.Index(i.Name, "eth0") != 0 {
+			continue
+		}
+		addrs, err := i.Addrs()
+		if err != nil {
+			return nil, err
+		}
+		for _, addr := range addrs {
+
+			switch v := addr.(type) {
+			case *net.IPNet:
+				if v.IP[0] == 0 {
+					return v.IP, nil
+				}
+			case *net.IPAddr:
+				return v.IP, nil
+			}
+		}
+	}
+	return nil, errors.New("IP not found")
 }
