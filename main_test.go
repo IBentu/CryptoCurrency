@@ -4,13 +4,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"fmt"
 	"sync"
 	"testing"
-
-	net "github.com/libp2p/go-libp2p-net"
-	pstore "github.com/libp2p/go-libp2p-peerstore"
-	pstoremem "github.com/libp2p/go-libp2p-peerstore/pstoremem"
 )
 
 func TestCheckBalance(t *testing.T) {
@@ -99,81 +94,6 @@ func TestMine(t *testing.T) {
 	}
 }
 
-func TestOpenStream(t *testing.T) {
-	n1 := NodeServer{
-		mutex:   &sync.Mutex{},
-		address: "127.0.0.1",
-		peers:   pstore.NewPeerstore(pstoremem.NewKeyBook(), pstoremem.NewAddrBook(), pstoremem.NewPeerMetadata()),
-	}
-	n1pKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
-	err = n1.newHost(2000, n1pKey)
-	if err != nil {
-		t.Error(err)
-	}
-	n2 := NodeServer{
-		mutex:   &sync.Mutex{},
-		address: "127.0.0.1",
-	}
-	n2pKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
-	err = n2.newHost(2001, n2pKey)
-	if err != nil {
-		t.Error(err)
-	}
-	_, err = n1.openStream(fmt.Sprintf("/ip4/127.0.0.1/tcp/2000/ipfs/%s", n1.host.ID().Pretty())) // self dial error...
-	if err != nil {
-		t.Error(err)
-	}
-
-}
-
-func TestOpenStreamSide1(t *testing.T) {
-	node := NodeServer{
-		mutex:   &sync.Mutex{},
-		address: "10.0.0.129",
-		peers:   pstore.NewPeerstore(pstoremem.NewKeyBook(), pstoremem.NewAddrBook(), pstoremem.NewPeerMetadata()),
-	}
-	pKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
-	err = node.newHost(2000, pKey)
-	if err != nil {
-		t.Error(err)
-	}
-
-	_, err = node.openStream(fmt.Sprintf("/ip4/10.0.0.130/tcp/2000/ipfs/%s", node.host.ID().Pretty()))
-	if err != nil {
-		t.Error(err)
-	}
-
-}
-
-func TestOpenStreamSide2(t *testing.T) {
-	node := NodeServer{
-		mutex:   &sync.Mutex{},
-		address: "10.0.0.130",
-		peers:   pstore.NewPeerstore(pstoremem.NewKeyBook(), pstoremem.NewAddrBook(), pstoremem.NewPeerMetadata()),
-	}
-	pKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
-	err = node.newHost(2000, pKey)
-	if err != nil {
-		t.Error(err)
-	}
-	c := make(chan bool)
-	node.host.SetStreamHandler(P2Pprotocol, func(s net.Stream) { fmt.Print("Stream Connected!"); c <- true })
-	<-c
-}
-
-
 func TestTranactionMarshaler(t *testing.T) {
 	tran := Transaction{
 		amount: 30,
@@ -191,7 +111,6 @@ func TestTranactionMarshaler(t *testing.T) {
 		t.Error("Transactions not the same")
 	}
 }
-
 
 func TestBlockMarshaler(t *testing.T) {
 	b := Block{

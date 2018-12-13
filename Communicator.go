@@ -20,7 +20,7 @@ func NewCommunicator(address string, recievedPacket, answerPacket chan *Packet) 
 
 // Send sends 1 Packet to address and returns the recieved packet
 func (c *Communicator) Send(address string, p Packet) (*Packet, error) {
-	conn, _ := net.Dial("tcp", fmt.Sprintf("%s:%s", address, ListenPort))
+	conn, _ := net.Dial("tcp", fmt.Sprintf("%s:%d", address, ListenPort))
 	// read in input from stdin
 	_, err := fmt.Fprintf(conn, string(append(p.bytes(), byte('\n'))))
 	if err != nil {
@@ -37,7 +37,7 @@ func (c *Communicator) Send(address string, p Packet) (*Packet, error) {
 
 // Listen listens for oncoming connections, recieves 1 Packet and sends one packet back
 func (c *Communicator) Listen() error {
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%s", ListenPort))
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", ListenPort))
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,6 @@ func (c *Communicator) Listen() error {
 		}
 		conn.Close()
 	}
-	return nil
 }
 
 // Address returns the address of this communicator
