@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func main1() {
+func main() {
 	settings, err := readJSON()
 	checkError(err)
 	var node Node

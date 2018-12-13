@@ -72,7 +72,7 @@ func (n *Node) firstInit() {
 		fmt.Print(err)
 		return
 	}
-	n.server.firstInit(n, IP.String(), n.recvChannel, n.scmChannel, n.stpmChannel, n.privKey)
+	n.server.firstInit(n, IP.String(), n.privKey)
 	n.blockchain.firstInit()
 	// update blockchain + transactionPool
 	n.saveData()
@@ -89,7 +89,7 @@ func (n *Node) saveData() {
 	settings.PrivateKey.D = n.privKey.D.Int64()
 	settings.PrivateKey.PublicKey.X = n.pubKey.X.Int64()
 	settings.PrivateKey.PublicKey.Y = n.pubKey.Y.Int64()
-	settings.Address = n.server.address
+	settings.Address = n.server.Address()
 	n.mutex.Unlock()
 	err = writeJSON(settings)
 	if err != nil {

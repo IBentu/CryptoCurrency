@@ -1,41 +1,24 @@
 package main
 
 import (
-	"bufio"
-	"context"
 	"crypto/ecdsa"
-	"fmt"
 	"sync"
-
-	libp2p "github.com/libp2p/go-libp2p"
-	crypto "github.com/libp2p/go-libp2p-crypto"
-	host "github.com/libp2p/go-libp2p-host"
-	net "github.com/libp2p/go-libp2p-net"
-	peer "github.com/libp2p/go-libp2p-peer"
-	pstore "github.com/libp2p/go-libp2p-peerstore"
-	pstoremem "github.com/libp2p/go-libp2p-peerstore/pstoremem"
-	ma "github.com/multiformats/go-multiaddr"
 )
 
 // NodeServer is the server of the node and it is responsible for communication between nodes
 type NodeServer struct {
-	node        *Node
-	peers       pstore.Peerstore
-	address     string
-	mutex       *sync.Mutex
-	recvChannel chan *Packet
-	scmChannel  chan *Packet
-	stpmChannel chan *Packet
-	host        host.Host
+	node         *Node
+	peers        map[string]ecdsa.PublicKey
+	mutex        *sync.Mutex
+	communicator *Communicator
+	recvChannel  chan *Packet
+	sendChannel  chan *Packet
 }
 
 const (
 
 	// ListenPort is the IP on which the Server is listening to
 	ListenPort = 1625
-
-	// P2Pprotocol is the peer-to-peer protocol the nodes use
-	P2Pprotocol = "/p2p/1.0.0"
 
 	// SCM is Sync-Chain-Message
 	SCM = "SCM"
@@ -56,252 +39,20 @@ const (
 func (n *NodeServer) init(node *Node, address string, recvChannel, sendChannel, stmpChannel chan *Packet, privKey *ecdsa.PrivateKey) {
 }
 
-func (n *NodeServer) firstInit(node *Node, address string, recvChannel, scmChannel, stpmChannel chan *Packet, privKey *ecdsa.PrivateKey) {
+func (n *NodeServer) firstInit(node *Node, address string, privKey *ecdsa.PrivateKey) {
 	n.node = node
 	n.mutex = &sync.Mutex{}
-	n.peers = pstore.NewPeerstore(pstoremem.NewKeyBook(), pstoremem.NewAddrBook(), pstoremem.NewPeerMetadata())
-	n.address = address
-	n.recvChannel = recvChannel
-	n.scmChannel = scmChannel
-	n.stpmChannel = stpmChannel
-	err := n.newHost(ListenPort, privKey)
-	if err != nil {
-		fmt.Print(err.Error())
-		return
-	}
-	//go n.listenForPeers()
+	n.peers = make(map[string]ecdsa.PublicKey)
+	n.recvChannel = make(chan *Packet)
+	n.sendChannel = make(chan *Packet)
+	n.communicator = NewCommunicator(address, n.recvChannel, n.sendChannel)
+	//go n.communicator.listen()
 	//go n.SyncBlockchain()
 	//go n.SyncTransactionPool()
 	//go n.sendToPeers()
 }
 
-func (n *NodeServer) newHost(listenPort int, privKey *ecdsa.PrivateKey) error {
-
-	priv, _, err := crypto.ECDSAKeyPairFromKey(privKey)
-	if err != nil {
-		return err
-	}
-	opts := []libp2p.Option{
-		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%d", n.address, listenPort)),
-		libp2p.Peerstore(n.peers),
-		libp2p.Identity(priv),
-	}
-	hst, err := libp2p.New(context.Background(), opts...)
-	if err != nil {
-		return err
-	}
-
-	// Build host multiaddress
-	hostAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", hst.ID().Pretty()))
-	addr := hst.Addrs()[0]
-	fullAddr := addr.Encapsulate(hostAddr)
-	fmt.Printf("I am %s\n", fullAddr)
-
-	n.mutex.Lock()
-	n.host = hst
-	n.host.SetStreamHandler(P2Pprotocol, n.HandleStream)
-	n.mutex.Unlock()
-
-	return nil
-}
-
-func (n *NodeServer) openStream(target string) (net.Stream, error) {
-	// The following code extracts target's peer ID from the
-	// given multiaddress
-	ipfsaddr, err := ma.NewMultiaddr(target)
-	if err != nil {
-		return nil, err
-	}
-
-	pid, err := ipfsaddr.ValueForProtocol(ma.P_IPFS)
-	if err != nil {
-		return nil, err
-	}
-
-	peerid, err := peer.IDB58Decode(pid)
-	if err != nil {
-		return nil, err
-	}
-
-	// Decapsulate the /ipfs/<peerID> part from the target
-	// /ip4/<a.b.c.d>/ipfs/<peer> becomes /ip4/<a.b.c.d>
-	targetPeerAddr, _ := ma.NewMultiaddr(
-		fmt.Sprintf("/ipfs/%s", peer.IDB58Encode(peerid)))
-	targetAddr := ipfsaddr.Decapsulate(targetPeerAddr)
-
-	// We have a peer ID and a targetAddr so we add it to the pstore
-	// so LibP2P knows how to contact it
-	n.peers.AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
-	n.host.Peerstore().AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
-
-	fmt.Println("Opening stream...")
-	// make a new stream from host B to host A
-	// it should be handled on host A by the handler we set above because
-	// we use the same /p2p/1.0.0 protocol
-	s, err := n.host.NewStream(context.Background(), peerid, "/p2p/1.0.0")
-	if err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-// HandleStream handles an incoming peer stream
-func (n *NodeServer) HandleStream(s net.Stream) {
-	fmt.Println("Stream connected.")
-	// Create a buffer stream for non blocking read and write.
-	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
-
-	go n.writeStream(rw)
-	go n.readStream(rw)
-
-}
-
-func (n *NodeServer) writeStream(rw *bufio.ReadWriter) {
-	go func() {
-		// sends SCM to peer every few seconds
-		for {
-			scm := <-n.scmChannel
-			n.mutex.Lock()
-			_, err := rw.Write(scm.bytes())
-			if err != nil {
-				fmt.Print(err)
-			}
-			n.mutex.Unlock()
-		}
-	}()
-
-	go func() {
-		// sends STPM to peer every few seconds
-		for {
-			stpm := <-n.stpmChannel
-			n.mutex.Lock()
-			_, err := rw.Write(stpm.bytes())
-			if err != nil {
-				fmt.Print(err)
-			}
-			n.mutex.Unlock()
-		}
-	}()
-}
-
-func (n *NodeServer) readStream(rw *bufio.ReadWriter) {
-	for {
-		data := make([]byte, 0)
-		l, err := rw.Read(data)
-		if err != nil {
-			fmt.Print(err.Error())
-			continue
-		}
-
-		if l == 0 {
-			continue
-		}
-		p := ToPacket(data)
-		switch p.requestType {
-		case SCM:
-			index, _, err := UnformatSCM(p.data)
-			if err != nil {
-				fmt.Printf(err.Error())
-				continue
-			}
-			res := n.node.CompareSCM(index)
-			if res == 0 {
-				continue
-			} else { // scenario 3
-				newP := NewPacket(FT, FormatFT(res))
-				_, err := rw.Write(newP.bytes())
-				if err == nil {
-					fmt.Print(err.Error())
-					continue
-				}
-				var bytes []byte
-				_, err = rw.Read(bytes)
-				if err == nil {
-					fmt.Print(err.Error())
-					continue
-				}
-				recvP := ToPacket(bytes)
-				if recvP.requestType != BP {
-					fmt.Print(ErrPacketType.Error())
-					continue
-				}
-				recvBlockchain, err := UnformatBP(recvP.data)
-				if err != nil {
-					fmt.Print(err.Error())
-					continue
-				}
-				if recvBlockchain[0].hash == n.node.blockchain.getLatestHash() {
-					n.node.blockchain.addBlocks(recvBlockchain[1:])
-				} else {
-					newP := NewPacket(IS, FormatIS(recvBlockchain[0].index-1))
-					_, err := rw.Write(newP.bytes())
-					if err == nil {
-						fmt.Print(err.Error())
-						continue
-					}
-					var prevBlocks []*Block
-					_, err = rw.Read(bytes)
-					if err == nil {
-						fmt.Print(err.Error())
-						continue
-					}
-					recvP := ToPacket(bytes)
-					if recvP.requestType != BP {
-						fmt.Print(ErrPacketType.Error())
-						continue
-					}
-					recvBlockchain, err := UnformatBP(recvP.data)
-					if err != nil {
-						fmt.Print(err.Error())
-						continue
-					}
-					prevBlocks = recvBlockchain
-					var sameIndex int
-					sameIndex, err = n.node.blockchain.compareBlockchains(recvBlockchain)
-					for err != nil {
-						newP := NewPacket(IS, FormatIS(recvBlockchain[0].index-1))
-						_, err := rw.Write(newP.bytes())
-						if err == nil {
-							fmt.Print(err.Error())
-							continue
-						}
-						_, err = rw.Read(bytes)
-						if err == nil {
-							fmt.Print(err.Error())
-							continue
-						}
-						recvP := ToPacket(bytes)
-						if recvP.requestType != BP {
-							fmt.Print(ErrPacketType.Error())
-							continue
-						}
-						recvBlockchain, err := UnformatBP(recvP.data)
-						if err != nil {
-							fmt.Print(err.Error())
-							continue
-						}
-						prevBlocks = append(prevBlocks, recvBlockchain...)
-						sameIndex, err = n.node.blockchain.compareBlockchains(recvBlockchain)
-					}
-					prevBlocks = append(prevBlocks, recvBlockchain[sameIndex])
-					n.node.blockchain.addBlocks(prevBlocks)
-				}
-
-			}
-		case STPM:
-			trans, err := UnformatSTPM(data)
-			if err != nil {
-				fmt.Print(err.Error())
-				continue
-			}
-			for _, v := range trans {
-				if !n.node.transactionPool.DoesExists(v) {
-					n.node.transactionPool.addTransaction(v)
-				}
-			}
-		case PA:
-		default:
-			fmt.Print(ErrPacketType.Error())
-		}
-	}
+// Address returns the address of the node
+func (n *NodeServer) Address() string {
+	return n.communicator.Address()
 }
