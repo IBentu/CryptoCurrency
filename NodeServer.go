@@ -8,7 +8,7 @@ import (
 // NodeServer is the server of the node and it is responsible for communication between nodes
 type NodeServer struct {
 	node         *Node
-	peers        map[string]ecdsa.PublicKey
+	peers        []*ecdsa.PublicKey
 	mutex        *sync.Mutex
 	communicator *Communicator
 	recvChannel  chan *Packet
@@ -39,20 +39,31 @@ const (
 func (n *NodeServer) init(node *Node, address string, recvChannel, sendChannel, stmpChannel chan *Packet, privKey *ecdsa.PrivateKey) {
 }
 
-func (n *NodeServer) firstInit(node *Node, address string, privKey *ecdsa.PrivateKey) {
+func (n *NodeServer) firstInit(conf *JSONConfig, node *Node, privKey *ecdsa.PrivateKey) {
 	n.node = node
 	n.mutex = &sync.Mutex{}
-	n.peers = make(map[string]ecdsa.PublicKey)
+	n.peers = make([]*ecdsa.PublicKey, 0)
 	n.recvChannel = make(chan *Packet)
 	n.sendChannel = make(chan *Packet)
-	n.communicator = NewCommunicator(address, n.recvChannel, n.sendChannel)
-	//go n.communicator.listen()
-	//go n.SyncBlockchain()
-	//go n.SyncTransactionPool()
+	n.communicator = NewCommunicator(conf.Addr, n.recvChannel, n.sendChannel)
+	go n.communicator.Listen()
 	//go n.sendToPeers()
 }
 
 // Address returns the address of the node
 func (n *NodeServer) Address() string {
 	return n.communicator.Address()
+}
+
+func (n *NodeServer) savePeers() error {
+	// save to database
+	return nil
+}
+
+func (n *NodeServer) requestBlockchain() {
+
+}
+
+func (n *NodeServer) requestPeers() {
+
 }

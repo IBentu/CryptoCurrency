@@ -96,11 +96,10 @@ func (b *Block) UnmarshalJSON(data []byte) error {
 
 //------------------------------------------------------------------------------------------------------------------------------
 
-// JSONSettings is a data type for the json settings file
-type JSONSettings struct {
+// JSONNode is a data type for the json settings file
+type JSONNode struct {
 	FirstInit  bool           `json:"FirstInit"`
 	PrivateKey JSONPrivateKey `json:"PrivateKey"`
-	Address    string         `json:"Address"`
 }
 
 // JSONPrivateKey is a data sub-type for the json settings file
@@ -123,3 +122,9 @@ func checkError(err error) {
 }
 
 //--------------------------------------------------------------------------------------------------------------
+
+//JSONConfig is
+type JSONConfig struct {
+	Addr string
+	Node JSONNode
+}

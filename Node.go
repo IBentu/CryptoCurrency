@@ -24,24 +24,22 @@ type Node struct {
 }
 
 // init initiates the Node by loading a json settings file
-func (n *Node) init() {
-	settings, err := readJSON()
-	checkError(err)
+func (n *Node) init(config *JSONConfig) {
 	n.mutex = &sync.Mutex{}
 	n.privKey = &ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{
 			Curve: elliptic.P256(),
-			X:     big.NewInt(settings.PrivateKey.PublicKey.X),
-			Y:     big.NewInt(settings.PrivateKey.PublicKey.Y),
+			X:     big.NewInt(config.Node.PrivateKey.PublicKey.X),
+			Y:     big.NewInt(config.Node.PrivateKey.PublicKey.Y),
 		},
-		D: big.NewInt(settings.PrivateKey.D),
+		D: big.NewInt(config.Node.PrivateKey.D),
 	}
 	n.pubKey = n.privKey.PublicKey
 	n.recvChannel = make(chan *Packet)
 	n.scmChannel = make(chan *Packet)
 	n.stpmChannel = make(chan *Packet)
 	n.server = &NodeServer{}
-	n.server.init(n, settings.Address, n.recvChannel, n.scmChannel, n.stpmChannel, n.privKey)
+	n.server.init(n, config.Addr, n.recvChannel, n.scmChannel, n.stpmChannel, n.privKey)
 	n.blockchain = &Blockchain{}
 	n.blockchain.init()
 	n.transactionPool = &TransactionPool{}
@@ -52,8 +50,7 @@ func (n *Node) init() {
 }
 
 //firstInit initiates the Node for the first time, and saves to a json settings file
-func (n *Node) firstInit() {
-	// check file
+func (n *Node) firstInit(conf *JSONConfig) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		fmt.Print(err)
@@ -62,40 +59,43 @@ func (n *Node) firstInit() {
 	n.privKey = key
 	n.pubKey = key.PublicKey
 	n.mutex = &sync.Mutex{}
-	n.blockchain.firstInit()
-	n.transactionPool.firstInit()
 	n.recvChannel = make(chan *Packet)
 	n.scmChannel = make(chan *Packet)
 	n.stpmChannel = make(chan *Packet)
-	IP, err := getIPAddress()
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
-	n.server.firstInit(n, IP.String(), n.privKey)
 	n.blockchain.firstInit()
-	// update blockchain + transactionPool
-	n.saveData()
+	n.transactionPool.firstInit()
+	n.server = &NodeServer{}
+	n.server.firstInit(conf, n, n.privKey)
+	n.blockchain.firstInit()
+	n.server.requestBlockchain()
+	n.server.requestPeers()
+	err1 := n.saveConfig()
+	err2 := n.blockchain.saveBlockchain()
+	err3 := n.server.savePeers()
+	if err1 != nil {
+		fmt.Printf("could not save config\n%s\n", err1)
+	}
+	if err2 != nil {
+		fmt.Printf("could not save blockchain\n%s\n", err2)
+	}
+	if err3 != nil {
+		fmt.Printf("could not save peers\n%s\n", err3)
+	}
 }
 
-// saveData saves the node's data in the settings file and the sqlite database
-func (n *Node) saveData() {
-	settings, err := readJSON()
+// saveConfig saves the node's data in the config file
+func (n *Node) saveConfig() error {
+	config, err := readJSON()
 	if err != nil {
-		fmt.Print(err)
-		return
+		return err
 	}
 	n.mutex.Lock()
-	settings.PrivateKey.D = n.privKey.D.Int64()
-	settings.PrivateKey.PublicKey.X = n.pubKey.X.Int64()
-	settings.PrivateKey.PublicKey.Y = n.pubKey.Y.Int64()
-	settings.Address = n.server.Address()
+	config.Node.PrivateKey.D = n.privKey.D.Int64()
+	config.Node.PrivateKey.PublicKey.X = n.pubKey.X.Int64()
+	config.Node.PrivateKey.PublicKey.Y = n.pubKey.Y.Int64()
+	config.Addr = n.server.Address()
 	n.mutex.Unlock()
-	err = writeJSON(settings)
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
+	return writeJSON(config)
 }
 
 // verifyTransaction checks the blockchain if the transaction is legal (enough credits to send), and verifies the transactionSign

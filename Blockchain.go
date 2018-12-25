@@ -14,12 +14,20 @@ type Blockchain struct {
 
 // init initiates the blockchain at node startup
 func (bc *Blockchain) init() {
-
+	//TODO: Load the blockchain from database
 }
 
 // firstInit initiates the blockchain at the first startup
 func (bc *Blockchain) firstInit() {
+	bc.blocks = make([]*Block, 1)
+	bc.hashMap = make(map[string]*Block, 1)
+	bc.mutex = &sync.Mutex{}
+	//put genesis Block values in first block
+}
 
+func (bc *Blockchain) saveBlockchain() error {
+	//TODO: save to database
+	return nil
 }
 
 //verifyBlock verifies the Block is valid
@@ -50,6 +58,7 @@ func (bc *Blockchain) getLatestHash() string {
 	return hash
 }
 
+//addBlock adds a block to the blockchain
 func (bc *Blockchain) addBlock(b *Block) {
 	bc.mutex.Lock()
 	bc.blocks = append(bc.blocks, b)

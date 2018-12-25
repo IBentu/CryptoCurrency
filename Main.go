@@ -5,42 +5,50 @@ import (
 	"errors"
 	"io/ioutil"
 	"net"
+	"os"
+	"path"
 	"strings"
 )
 
 func main() {
-	settings, err := readJSON()
+	config, err := readJSON()
 	checkError(err)
 	var node Node
-	if settings.FirstInit {
-		settings.FirstInit = false
-		err = writeJSON(settings)
+	if config.Node.FirstInit {
+		config.Node.FirstInit = false
+		err = writeJSON(config)
 		checkError(err)
-		node.firstInit()
+		node.firstInit(config)
 	} else {
-		node.init()
+		node.init(config)
 	}
 }
 
-func readJSON() (*JSONSettings, error) {
-	data, err := ioutil.ReadFile("./Settings.json")
+func readJSON() (*JSONConfig, error) {
+	dir, err := os.Getwd()
+	checkError(err)
+	dir = path.Join(dir, "/config.json")
+	data, err := ioutil.ReadFile(dir)
 	if err != nil {
 		return nil, err
 	}
-	var settings JSONSettings
-	err = json.Unmarshal(data, &settings)
+	var config JSONConfig
+	err = json.Unmarshal(data, &config)
 	if err != nil {
 		return nil, err
 	}
-	return &settings, err
+	return &config, err
 }
 
-func writeJSON(settings *JSONSettings) error {
-	data, err := json.Marshal(settings)
+func writeJSON(config *JSONConfig) error {
+	data, err := json.Marshal(config)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile("./Settings.json", data, 0644)
+	dir, err := os.Getwd()
+	checkError(err)
+	dir = path.Join(dir, "/config.json")
+	err = ioutil.WriteFile(dir, data, 0644)
 	return err
 }
 
