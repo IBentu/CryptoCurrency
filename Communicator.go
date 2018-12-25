@@ -19,8 +19,8 @@ func NewCommunicator(address string, recievedPacket, answerPacket chan *Packet) 
 	return &Communicator{address: address, recievedPacket: recievedPacket, answerPacket: answerPacket, port: ListenPort}
 }
 
-// Send sends 1 Packet to address and returns the recieved packet
-func (c *Communicator) Send(address string, p *Packet) (*Packet, error) {
+// SR1 sends 1 Packet to address and returns the recieved packet
+func (c *Communicator) SR1(address string, p *Packet) (*Packet, error) {
 	fmt.Printf("Connecting to %s...\n", address)
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
