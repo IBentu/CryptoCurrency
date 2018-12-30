@@ -42,64 +42,78 @@ func (bc *Blockchain) verifyBlock(b Block) bool {
 	}
 }
 
-// getLatestIndex returns the indexes of the latests block
-func (bc *Blockchain) getLatestIndex() int {
+// GetLatestIndex returns the indexes of the latests block
+func (bc *Blockchain) GetLatestIndex() int {
 	bc.mutex.Lock()
 	length := len(bc.blocks) - 1
 	bc.mutex.Unlock()
 	return length
 }
 
-// getLatestHash returns the indexes of the latests block
-func (bc *Blockchain) getLatestHash() string {
+// GetLatestHash returns the indexes of the latests block
+func (bc *Blockchain) GetLatestHash() string {
 	bc.mutex.Lock()
 	hash := bc.blocks[len(bc.blocks)-1].hash
 	bc.mutex.Unlock()
 	return hash
 }
 
-//addBlock adds a block to the blockchain
-func (bc *Blockchain) addBlock(b *Block) {
+// GetHash returns the hash of the block in the specified index
+func (bc *Blockchain) GetHash(index int) (string, error) {
+	if index > bc.GetLatestIndex() || index < 0 {
+		return "", errors.New("Index Out of Bounds")
+	}
+	bc.mutex.Lock()
+	hash := bc.blocks[index].hash
+	bc.mutex.Unlock()
+	return hash, nil
+}
+
+//AddBlock adds a block to the blockchain
+func (bc *Blockchain) AddBlock(b *Block) {
 	bc.mutex.Lock()
 	bc.blocks = append(bc.blocks, b)
 	bc.hashMap[b.hash] = b
 	bc.mutex.Unlock()
 }
 
-func (bc *Blockchain) addBlocks(blocks []*Block) {
+// AddBlocks adds blocks to the blockchain
+func (bc *Blockchain) AddBlocks(blocks []*Block) {
 	for _, b := range blocks {
-		bc.addBlock(b)
+		bc.AddBlock(b)
 	}
 }
 
-// isBlockValid validates a block is valid hash-wise and index-wise
-func (bc *Blockchain) isBlockValid(b Block) bool {
+// IsBlockValid validates a block is valid hash-wise and index-wise
+func (bc *Blockchain) IsBlockValid(b Block) bool {
 	bc.mutex.Lock()
 	valid := bc.blocks[len(bc.blocks)-1].index == b.index && bc.blocks[len(bc.blocks)-1].hash == b.prevHash
 	bc.mutex.Unlock()
 	return valid
 }
 
-// length returns the current length of the blockchain
-func (bc *Blockchain) length() int {
+// Length returns the current length of the blockchain
+func (bc *Blockchain) Length() int {
 	bc.mutex.Lock()
 	length := len(bc.blocks)
 	bc.mutex.Unlock()
 	return length
 }
 
-func (bc *Blockchain) getBlock(index int) Block {
+// GetBlock returns a block in the specified index
+func (bc *Blockchain) GetBlock(index int) Block {
 	bc.mutex.Lock()
 	b := bc.blocks[index]
 	bc.mutex.Unlock()
 	return *b
 }
 
-func (bc *Blockchain) compareBlockchains(blocks []*Block) (int, error) {
-	for i := blocks[len(blocks)-1].index; i >= blocks[0].index; i-- {
-		if blocks[i].hash == bc.getLatestHash() {
-			return i, nil
-		}
+// CompareBlockchains compares the recieved blockchain's bottom block with the current one's
+// top and returns the index of the first blocks who match hash-wise
+func (bc *Blockchain) CompareBlockchains(blocks []*Block) bool {
+	hash, err := bc.GetHash(len(blocks) - 1)
+	if err != nil {
+		return false
 	}
-	return 0, errors.New("No Matched Blocks")
+	return hash == blocks[0].hash
 }

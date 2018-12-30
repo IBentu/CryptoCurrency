@@ -124,20 +124,20 @@ func (n *Node) mine() bool {
 	}
 	block.transactions = transactionsToMake
 	block.timestamp = GetCurrentMillis()
-	block.index = n.blockchain.getLatestIndex() + 1
-	block.prevHash = n.blockchain.getLatestHash()
+	block.index = n.blockchain.GetLatestIndex() + 1
+	block.prevHash = n.blockchain.GetLatestHash()
 	var counter int64
 	for {
 		block.filler = big.NewInt(counter)
 		counter++
 		block.updateHash()
 		if block.verifyPOW() {
-			if n.blockchain.isBlockValid(block) { // incase the blockchain was updated while mining
-				block.index = n.blockchain.getLatestIndex() + 1
-				block.prevHash = n.blockchain.getLatestHash()
+			if n.blockchain.IsBlockValid(block) { // incase the blockchain was updated while mining
+				block.index = n.blockchain.GetLatestIndex() + 1
+				block.prevHash = n.blockchain.GetLatestHash()
 				continue
 			}
-			n.blockchain.addBlock(&block)
+			n.blockchain.AddBlock(&block)
 			return true
 		}
 	}
@@ -146,15 +146,15 @@ func (n *Node) mine() bool {
 // checkBalance goes through the blockchain, checks and returns the balance of a certain PublicKey
 func (n *Node) checkBalance(key ecdsa.PublicKey) int {
 	sum := 0
-	for i := 0; i < n.blockchain.length(); i++ {
-		if n.blockchain.getBlock(i).miner == key {
+	for i := 0; i < n.blockchain.Length(); i++ {
+		if n.blockchain.GetBlock(i).miner == key {
 			sum += 50 // decide how much money to reward miners. for now 50
 		}
-		for j := 0; j < len(n.blockchain.getBlock(i).transactions); j++ {
-			if n.blockchain.getBlock(i).transactions[j].senderKey == key {
-				sum -= n.blockchain.getBlock(i).transactions[j].amount
-			} else if n.blockchain.getBlock(i).transactions[j].recipientKey == key {
-				sum += n.blockchain.getBlock(i).transactions[j].amount
+		for j := 0; j < len(n.blockchain.GetBlock(i).transactions); j++ {
+			if n.blockchain.GetBlock(i).transactions[j].senderKey == key {
+				sum -= n.blockchain.GetBlock(i).transactions[j].amount
+			} else if n.blockchain.GetBlock(i).transactions[j].recipientKey == key {
+				sum += n.blockchain.GetBlock(i).transactions[j].amount
 			}
 		}
 	}
@@ -184,7 +184,7 @@ func (n *Node) makeTransaction(recipient ecdsa.PublicKey, amount int) bool {
 func (n *Node) makeSCM() {
 	for {
 		time.Sleep(5 * time.Second)
-		p := NewPacket(SCM, FormatSCM(n.blockchain.getLatestIndex(), n.blockchain.getLatestHash()))
+		p := NewPacket(SCM, FormatSCM(n.blockchain.GetLatestIndex(), n.blockchain.GetLatestHash()))
 		n.scmChannel <- p
 	}
 }
@@ -196,7 +196,7 @@ returns 0 if scenario 2
 returns the difference between indexes otherwise
 */
 func (n *Node) CompareSCM(index int) int {
-	currIndex := n.blockchain.getLatestIndex()
+	currIndex := n.blockchain.GetLatestIndex()
 	if index <= currIndex {
 		return 0
 	}
@@ -208,5 +208,12 @@ func (n *Node) makeSTMP() {
 		time.Sleep(5 * time.Second)
 		p := NewPacket(STPM, n.transactionPool.formatSTPM())
 		n.stpmChannel <- p
+	}
+}
+
+func (n *Node) updateChain() {
+	for {
+		n.server.requestBlockchain()
+		time.Sleep(time.Minute)
 	}
 }

@@ -5,6 +5,27 @@ import (
 	"errors"
 )
 
+const (
+	// BR is Blockchain Request
+	BR = "Blockchain Request"
+	// SCM is Sync-Chain-Message
+	SCM = "Sync-Chain-Message"
+	// FT is From-Top
+	FT = "From-Top"
+	// IS is Index-Specific
+	IS = "Index-Specific"
+	// TPR is Transaction-Pool Request
+	TPR = "Transaction-Pool Request"
+	// STPM is Sync-Transaction-Pool-Message
+	STPM = "Sync-Transaction-Pool-Message"
+	// NT is New-Transaction
+	NT = "New-Transaction"
+	// PA is Peer-Addresses
+	PA = "Peer-Addresses"
+	// BP is Blocks-Packet
+	BP = "Blocks-Packet"
+)
+
 // Packet is the struct for transferring data between Nodes
 type Packet struct {
 	requestType string
@@ -38,4 +59,9 @@ func ToPacket(b []byte) *Packet {
 		data:        bs[1],
 	}
 	return p
+}
+
+// Type returns the packet type
+func (p *Packet) Type() string {
+	return p.requestType
 }
