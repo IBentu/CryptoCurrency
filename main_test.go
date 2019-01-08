@@ -88,7 +88,7 @@ func TestMine(t *testing.T) {
 	if !node.mine() {
 		t.Error("No transactions in transactionPool")
 	} else {
-		if node.blockchain.length() != 2 || node.blockchain.blocks[1].index != expected.index || node.blockchain.blocks[1].prevHash != expected.prevHash {
+		if node.blockchain.Length() != 2 || node.blockchain.blocks[1].index != expected.index || node.blockchain.blocks[1].prevHash != expected.prevHash {
 			t.Error("Invalid block mined")
 		}
 	}

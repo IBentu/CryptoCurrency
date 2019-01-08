@@ -45,6 +45,13 @@ func (tp *TransactionPool) addTransaction(t *Transaction) {
 	tp.mutex.Unlock()
 }
 
+// addTransactions add a transactin to the pending transaction slice
+func (tp *TransactionPool) addTransactions(trans []*Transaction) {
+	for _, t := range trans {
+		tp.addTransaction(t)
+	}
+}
+
 func (tp *TransactionPool) formatSTPM() []byte {
 	var data []byte
 	for _, v := range tp.transactions {

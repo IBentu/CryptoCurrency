@@ -106,3 +106,7 @@ func (n *NodeServer) requestBlockchain() { /// TEST!!!
 func (n *NodeServer) requestPeers() {
 
 }
+
+func (n *NodeServer) requestPool() {
+	
+}

@@ -98,11 +98,12 @@ func (n *Node) saveConfig() error {
 	return writeJSON(config)
 }
 
-// verifyTransaction checks the blockchain if the transaction is legal (enough credits to send), and verifies the transactionSign
+// verifyTransaction checks the blockchain if the transaction is legal (enough credits to send), and verifies the transactionSign, and also double spending
 func (n *Node) verifyTransaction(t *Transaction) bool {
 	signed := ecdsa.Verify(&t.senderKey, []byte(t.hash), t.signR, t.signS)
 	validBalance := t.amount <= n.checkBalance(t.senderKey)
-	return signed && validBalance
+	noDoubleSpending := !n.blockchain.DoesTransactionExist(t)
+	return signed && validBalance && noDoubleSpending
 }
 
 // mine creates a block using the TransactionPool, returns true if a block was created and false otherwise
@@ -133,9 +134,8 @@ func (n *Node) mine() bool {
 		block.updateHash()
 		if block.verifyPOW() {
 			if n.blockchain.IsBlockValid(block) { // incase the blockchain was updated while mining
-				block.index = n.blockchain.GetLatestIndex() + 1
-				block.prevHash = n.blockchain.GetLatestHash()
-				continue
+				n.transactionPool.addTransactions(transactionsToMake)
+				return false
 			}
 			n.blockchain.AddBlock(&block)
 			return true
@@ -181,36 +181,23 @@ func (n *Node) makeTransaction(recipient ecdsa.PublicKey, amount int) bool {
 	return true
 }
 
-func (n *Node) makeSCM() {
+// updatePool requests an update for the transactionPool from peers
+func (n *Node) updatePool() {
 	for {
-		time.Sleep(5 * time.Second)
-		p := NewPacket(SCM, FormatSCM(n.blockchain.GetLatestIndex(), n.blockchain.GetLatestHash()))
-		n.scmChannel <- p
+		n.server.requestPool()
+		time.Sleep(time.Minute)
 	}
 }
 
-/*
-CompareSCM compares by Blockchain Sync Protocol (refer to protocol doc):
-returns 0 if scenario 1
-returns 0 if scenario 2
-returns the difference between indexes otherwise
-*/
-func (n *Node) CompareSCM(index int) int {
-	currIndex := n.blockchain.GetLatestIndex()
-	if index <= currIndex {
-		return 0
-	}
-	return index - currIndex
-}
-
-func (n *Node) makeSTMP() {
+// updatePeers requests an update for the transactionPool from peers
+func (n *Node) updatePeers() {
 	for {
-		time.Sleep(5 * time.Second)
-		p := NewPacket(STPM, n.transactionPool.formatSTPM())
-		n.stpmChannel <- p
+		n.server.requestPeers()
+		time.Sleep(time.Minute)
 	}
 }
 
+// updateChain requests an update for the blockchain from peers
 func (n *Node) updateChain() {
 	for {
 		n.server.requestBlockchain()

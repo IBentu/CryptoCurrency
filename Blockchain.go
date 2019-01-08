@@ -92,6 +92,30 @@ func (bc *Blockchain) IsBlockValid(b Block) bool {
 	return valid
 }
 
+// DoesTransactionExist checks if a given transaction already happened in the blockchain
+func (bc *Blockchain) DoesTransactionExist(t *Transaction) bool {
+	blocks := bc.getCopy()
+	for _, block := range blocks {
+		for _, transaction := range block.transactions {
+			if transaction.hash == t.hash {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// getCopy returns a copy of the blockchain
+func (bc *Blockchain) getCopy() []Block {
+	copy := []Block{}
+	bc.mutex.Lock()
+	for _, block := range bc.blocks {
+		copy = append(copy, *block)
+	}
+	bc.mutex.Unlock()
+	return copy
+}
+
 // Length returns the current length of the blockchain
 func (bc *Blockchain) Length() int {
 	bc.mutex.Lock()
