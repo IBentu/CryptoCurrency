@@ -68,7 +68,7 @@ func (c *Communicator) Listen() error {
 			fmt.Println(err)
 		}
 		conn.Close()
-		fmt.Println("Connection closed")
+		fmt.Println("Connection closed.")
 	}
 }
 

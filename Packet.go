@@ -8,14 +8,16 @@ import (
 const (
 	// BR is Blockchain Request
 	BR = "Blockchain Request"
+	// TPR is Transaction-Pool Request
+	TPR = "Transaction-Pool Request"
+	// PR is Peers Request
+	PR = "Peers Request"
 	// SCM is Sync-Chain-Message
 	SCM = "Sync-Chain-Message"
 	// FT is From-Top
 	FT = "From-Top"
 	// IS is Index-Specific
 	IS = "Index-Specific"
-	// TPR is Transaction-Pool Request
-	TPR = "Transaction-Pool Request"
 	// STPM is Sync-Transaction-Pool-Message
 	STPM = "Sync-Transaction-Pool-Message"
 	// NT is New-Transaction

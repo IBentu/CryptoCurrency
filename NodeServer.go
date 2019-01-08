@@ -104,9 +104,30 @@ func (n *NodeServer) requestBlockchain() { /// TEST!!!
 }
 
 func (n *NodeServer) requestPeers() {
-
+	for _, peer := range n.peers {
+		p := NewPacket(BR, []byte{})
+		p, err := n.communicator.SR1(peer, p)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		if p.Type() != STPM {
+			fmt.Println(err)
+			continue
+		}
+		trans, err := UnformatSTPM(p.data)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		for _, t := range trans {
+			if !n.node.transactionPool.DoesExists(t) {
+				n.node.transactionPool.addTransaction(t)
+			}
+		}
+	}
 }
 
 func (n *NodeServer) requestPool() {
-	
+
 }
