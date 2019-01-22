@@ -132,6 +132,27 @@ func (bc *Blockchain) GetBlock(index int) Block {
 	return *b
 }
 
+// GetBlocksFromTop returns the number of blocks from the top of the blockchain from the received number
+func (bc *Blockchain) GetBlocksFromTop(num int) []*Block {
+	index := bc.GetLatestIndex() - num
+	bc.mutex.Lock()
+	blocks := bc.blocks[index:]
+	bc.mutex.Unlock()
+	return blocks
+}
+
+// GetBlocksFromIndex returns blocks from the specified index until ten block before it (or the genesis block)
+func (bc *Blockchain) GetBlocksFromIndex(index int) []*Block {
+	firstIndex := index - 10
+	if firstIndex < 0 {
+		firstIndex = 0
+	}
+	bc.mutex.Lock()
+	blocks := bc.blocks[firstIndex:index]
+	bc.mutex.Unlock()
+	return blocks
+}
+
 // CompareBlockchains compares the recieved blockchain's bottom block with the current one's
 // top and returns the index of the first blocks who match hash-wise
 func (bc *Blockchain) CompareBlockchains(blocks []*Block) bool {

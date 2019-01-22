@@ -36,6 +36,40 @@ func (n *NodeServer) firstInit(conf *JSONConfig, node *Node, privKey *ecdsa.Priv
 	//go n.sendToPeers()
 }
 
+func (n *NodeServer) handlePackets() { // NOT FISNISHED
+	for {
+		p := <-n.recvChannel
+		retP := &Packet{requestType: ""}
+		switch p.Type() {
+		case BR:
+			retP = NewPacket(SCM, FormatSCM(n.node.blockchain.GetLatestIndex(), n.node.blockchain.GetLatestHash()))
+		case TPR:
+			//------------------------------
+		case PR:
+			retP = NewPacket(PA, FormatPA(n.peers))
+		case FT:
+			num, err := UnformatFT(p.data)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+			retP = NewPacket(BP, FormatBP(n.node.blockchain.GetBlocksFromTop(num)))
+		case IS:
+			index, err := UnformatIS(p.data)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+			retP = NewPacket(BP, FormatBP(n.node.blockchain.GetBlocksFromIndex(index)))
+		case NT:
+			//---
+		default:
+			fmt.Println(ErrPacketType)
+		}
+		n.sendChannel <- retP
+	}
+}
+
 // Address returns the address of the node
 func (n *NodeServer) Address() string {
 	return n.communicator.Address()
@@ -44,6 +78,15 @@ func (n *NodeServer) Address() string {
 func (n *NodeServer) savePeers() error {
 	// save to database
 	return nil
+}
+
+func (n *NodeServer) doesPeerExist(peer string) bool {
+	for _, addr := range n.peers {
+		if peer == addr {
+			return true
+		}
+	}
+	return false
 }
 
 func (n *NodeServer) requestBlockchain() { /// TEST!!!
@@ -105,6 +148,31 @@ func (n *NodeServer) requestBlockchain() { /// TEST!!!
 
 func (n *NodeServer) requestPeers() {
 	for _, peer := range n.peers {
+		p := NewPacket(PR, []byte{})
+		p, err := n.communicator.SR1(peer, p)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		if p.Type() != PA {
+			fmt.Println(ErrPacketType)
+			continue
+		}
+		addrs := UnformatPA(p.data)
+		addrsToAdd := []string{}
+		for _, addr := range addrs {
+			if !n.doesPeerExist(addr) {
+				addrsToAdd = append(addrsToAdd, addr)
+			}
+		}
+		n.mutex.Lock()
+		n.peers = append(n.peers, addrsToAdd...)
+		n.mutex.Unlock()
+	}
+}
+
+func (n *NodeServer) requestPool() {
+	for _, peer := range n.peers {
 		p := NewPacket(BR, []byte{})
 		p, err := n.communicator.SR1(peer, p)
 		if err != nil {
@@ -112,7 +180,7 @@ func (n *NodeServer) requestPeers() {
 			continue
 		}
 		if p.Type() != STPM {
-			fmt.Println(err)
+			fmt.Println(ErrPacketType)
 			continue
 		}
 		trans, err := UnformatSTPM(p.data)
@@ -126,8 +194,4 @@ func (n *NodeServer) requestPeers() {
 			}
 		}
 	}
-}
-
-func (n *NodeServer) requestPool() {
-
 }

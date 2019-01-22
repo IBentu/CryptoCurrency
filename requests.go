@@ -76,3 +76,22 @@ func UnformatBP(data []byte) ([]*Block, error) {
 	}
 	return blocks, nil
 }
+
+// FormatPA formats address (string) array to byte array
+func FormatPA(addresses []string) []byte {
+	var data []byte
+	for _, addr := range addresses {
+		data = append(append(data, []byte(addr)...), []byte("/\000")...)
+	}
+	return data
+}
+
+// UnformatPA formats byte array to address (string) array
+func UnformatPA(data []byte) []string {
+	splat := bytes.Split(data, []byte("/\000"))
+	addrs := []string{}
+	for _, v := range splat {
+		addrs = append(addrs, string(v))
+	}
+	return addrs
+}

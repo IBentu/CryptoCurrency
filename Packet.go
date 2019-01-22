@@ -36,7 +36,7 @@ type Packet struct {
 
 var (
 	// ErrPacketType is an error for a packet with the wrong message type
-	ErrPacketType = errors.New("Wrong Packet Type")
+	ErrPacketType = errors.New("Invalid Packet Type")
 )
 
 // NewPacket returns a new packet
