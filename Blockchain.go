@@ -162,3 +162,12 @@ func (bc *Blockchain) CompareBlockchains(blocks []*Block) bool {
 	}
 	return hash == blocks[0].hash
 }
+
+// HashString returns a string of the hashes of the blockchain
+func (bc *Blockchain) HashString() string {
+	str := ""
+	for k := range bc.hashMap {
+		str += k + " --> "
+	}
+	return str + "null"
+}

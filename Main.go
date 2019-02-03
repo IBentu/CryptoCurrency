@@ -4,13 +4,22 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"os"
 	"path"
 	"strings"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	crand "crypto/rand"
+	"fmt"
 )
 
 func main() {
+	//realMain()
+	//tempMain()
+}
+func realMain() {
 	config, err := readJSON()
 	checkError(err)
 	var node Node
@@ -22,6 +31,26 @@ func main() {
 	} else {
 		node.init(config)
 	}
+}
+
+func tempMain() {
+	config, err := readJSON()
+	checkError(err)
+	var node Node
+	node.init(config)
+	key, err := ecdsa.GenerateKey(elliptic.P256(), crand.Reader)
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+	for i := 0; i < 8; i++{
+		node.makeTransaction(key.PublicKey, rand.Intn(100))
+	}
+	node.mine()
+	node.mine()
+	peerStr := config.Peers
+	splat := strings.Split(peerStr, ";")
+	node.server.peers = append(node.server.peers, splat...)
 }
 
 func readJSON() (*JSONConfig, error) {

@@ -125,6 +125,7 @@ func checkError(err error) {
 
 //JSONConfig is
 type JSONConfig struct {
-	Addr string
-	Node JSONNode
+	Addr  string
+	Node  JSONNode
+	Peers string
 }

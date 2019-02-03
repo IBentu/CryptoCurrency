@@ -44,9 +44,9 @@ func (n *Node) init(config *JSONConfig) {
 	n.blockchain.init()
 	n.transactionPool = &TransactionPool{}
 	n.transactionPool.init()
-
-	//go n.makeSCM()
-	//go n.makeSTPM()
+	go n.updateChain()
+	go n.updatePeers()
+	go n.updatePool()
 }
 
 //firstInit initiates the Node for the first time, and saves to a json settings file
@@ -81,6 +81,9 @@ func (n *Node) firstInit(conf *JSONConfig) {
 	if err3 != nil {
 		fmt.Printf("could not save peers\n%s\n", err3)
 	}
+	go n.updateChain()
+	go n.updatePeers()
+	go n.updatePool()
 }
 
 // saveConfig saves the node's data in the config file
@@ -108,12 +111,6 @@ func (n *Node) verifyTransaction(t *Transaction) bool {
 
 // mine creates a block using the TransactionPool, returns true if a block was created and false otherwise
 func (n *Node) mine() bool {
-	n.mutex.Lock()
-	if n.transactionPool.length() == 0 {
-		n.mutex.Unlock()
-		return false
-	}
-	n.mutex.Unlock()
 	var block Block
 	block.miner = n.pubKey
 	transactionsToMake := make([]*Transaction, 0)

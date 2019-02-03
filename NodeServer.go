@@ -41,10 +41,10 @@ func (n *NodeServer) handlePackets() { // NOT FISNISHED
 		p := <-n.recvChannel
 		retP := &Packet{requestType: ""}
 		switch p.Type() {
+		case TPR:
+			retP = NewPacket(STPM, n.node.transactionPool.FormatSTPM())
 		case BR:
 			retP = NewPacket(SCM, FormatSCM(n.node.blockchain.GetLatestIndex(), n.node.blockchain.GetLatestHash()))
-		case TPR:
-			//------------------------------
 		case PR:
 			retP = NewPacket(PA, FormatPA(n.peers))
 		case FT:
@@ -62,7 +62,6 @@ func (n *NodeServer) handlePackets() { // NOT FISNISHED
 			}
 			retP = NewPacket(BP, FormatBP(n.node.blockchain.GetBlocksFromIndex(index)))
 		case NT:
-			//---
 		default:
 			fmt.Println(ErrPacketType)
 		}
@@ -173,7 +172,7 @@ func (n *NodeServer) requestPeers() {
 
 func (n *NodeServer) requestPool() {
 	for _, peer := range n.peers {
-		p := NewPacket(BR, []byte{})
+		p := NewPacket(TPR, []byte{})
 		p, err := n.communicator.SR1(peer, p)
 		if err != nil {
 			fmt.Println(err)

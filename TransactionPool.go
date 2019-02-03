@@ -52,7 +52,8 @@ func (tp *TransactionPool) addTransactions(trans []*Transaction) {
 	}
 }
 
-func (tp *TransactionPool) formatSTPM() []byte {
+//FormatSTPM fomrmats a slice of Transactions to []byte
+func (tp *TransactionPool) FormatSTPM() []byte {
 	var data []byte
 	for _, v := range tp.transactions {
 		bytes, err := v.Format()
