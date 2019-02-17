@@ -15,14 +15,14 @@ type Communicator struct {
 }
 
 //NewCommunicator creates a new Communicator and returns it
-func NewCommunicator(address string, recievedPacket, answerPacket chan *Packet) *Communicator {
-	return &Communicator{address: address, recievedPacket: recievedPacket, answerPacket: answerPacket, port: ListenPort}
+func NewCommunicator(address string, recievedPacket, answerPacket chan *Packet, port int) *Communicator {
+	return &Communicator{address: address, recievedPacket: recievedPacket, answerPacket: answerPacket, port: port}
 }
 
 // SR1 sends 1 Packet to address and returns the recieved packet
 func (c *Communicator) SR1(address string, p *Packet) (*Packet, error) {
-	fmt.Printf("Connecting to %s...\n", address)
-	conn, err := net.Dial("tcp", address)
+	fmt.Printf("Connecting to %s:%d...\n", address, c.port)
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", address, c.port))
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (c *Communicator) SR1(address string, p *Packet) (*Packet, error) {
 
 // Listen listens for oncoming connections, recieves 1 Packet and sends one packet back
 func (c *Communicator) Listen() error {
-	fmt.Println("Waiting for connection...")
+	fmt.Println("Listening for nodes...")
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", c.port))
 	if err != nil {
 		return err

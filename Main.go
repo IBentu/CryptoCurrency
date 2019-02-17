@@ -1,23 +1,24 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	crand "crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"net"
 	"os"
 	"path"
 	"strings"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	crand "crypto/rand"
-	"fmt"
+	"time"
 )
 
 func main() {
 	//realMain()
-	//tempMain()
+	tempMain()
 }
 func realMain() {
 	config, err := readJSON()
@@ -43,7 +44,7 @@ func tempMain() {
 		fmt.Print(err)
 		return
 	}
-	for i := 0; i < 8; i++{
+	for i := 0; i < 8; i++ {
 		node.makeTransaction(key.PublicKey, rand.Intn(100))
 	}
 	node.mine()
@@ -51,6 +52,7 @@ func tempMain() {
 	peerStr := config.Peers
 	splat := strings.Split(peerStr, ";")
 	node.server.peers = append(node.server.peers, splat...)
+	time.Sleep(3 * time.Minute)
 }
 
 func readJSON() (*JSONConfig, error) {

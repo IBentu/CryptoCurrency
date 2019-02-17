@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"math/big"
 	"sync"
 )
 
@@ -21,6 +22,9 @@ func (bc *Blockchain) init() {
 func (bc *Blockchain) firstInit() {
 	bc.blocks = make([]*Block, 1)
 	bc.hashMap = make(map[string]*Block, 1)
+	b := &Block{index: 0, timestamp: 0, transactions: make([]*Transaction, 0), prevHash: "", filler: big.NewInt(0)}
+	b.updateHash()
+	bc.blocks[0] = b
 	bc.mutex = &sync.Mutex{}
 	//put genesis Block values in first block
 }
@@ -171,3 +175,4 @@ func (bc *Blockchain) HashString() string {
 	}
 	return str + "null"
 }
+

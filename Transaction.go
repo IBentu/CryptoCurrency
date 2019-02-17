@@ -35,7 +35,10 @@ func transactionSliceToString(transactions []*Transaction) string {
 
 // returns a string of a PublicKey
 func pubKeyToString(k ecdsa.PublicKey) string {
-	return string(k.X.Bytes()) + string(k.Y.Bytes())
+	if k.X != nil {
+		return string(k.X.Bytes()) + string(k.Y.Bytes())
+	}
+	return ""
 }
 
 // hashTransaction hashes the transaction

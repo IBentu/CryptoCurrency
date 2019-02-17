@@ -23,6 +23,8 @@ const (
 )
 
 func (n *NodeServer) init(node *Node, address string, recvChannel, sendChannel, stmpChannel chan *Packet, privKey *ecdsa.PrivateKey) {
+	n.communicator = NewCommunicator(address, n.recvChannel, n.sendChannel, ListenPort)
+	go n.communicator.Listen()
 }
 
 func (n *NodeServer) firstInit(conf *JSONConfig, node *Node, privKey *ecdsa.PrivateKey) {
@@ -31,7 +33,7 @@ func (n *NodeServer) firstInit(conf *JSONConfig, node *Node, privKey *ecdsa.Priv
 	n.peers = make([]string, 0)
 	n.recvChannel = make(chan *Packet)
 	n.sendChannel = make(chan *Packet)
-	n.communicator = NewCommunicator(conf.Addr, n.recvChannel, n.sendChannel)
+	n.communicator = NewCommunicator(conf.Addr, n.recvChannel, n.sendChannel, ListenPort)
 	go n.communicator.Listen()
 	//go n.sendToPeers()
 }

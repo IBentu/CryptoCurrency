@@ -41,12 +41,13 @@ func (n *Node) init(config *JSONConfig) {
 	n.server = &NodeServer{}
 	n.server.init(n, config.Addr, n.recvChannel, n.scmChannel, n.stpmChannel, n.privKey)
 	n.blockchain = &Blockchain{}
-	n.blockchain.init()
+	n.blockchain.firstInit() // change to init later
 	n.transactionPool = &TransactionPool{}
 	n.transactionPool.init()
 	go n.updateChain()
 	go n.updatePeers()
 	go n.updatePool()
+	go n.printBlockchain()
 }
 
 //firstInit initiates the Node for the first time, and saves to a json settings file
@@ -84,6 +85,13 @@ func (n *Node) firstInit(conf *JSONConfig) {
 	go n.updateChain()
 	go n.updatePeers()
 	go n.updatePool()
+}
+
+func (n *Node) printBlockchain() {
+	for {
+		time.Sleep(30 * time.Second)
+		fmt.Println(n.blockchain.HashString())
+	}
 }
 
 // saveConfig saves the node's data in the config file

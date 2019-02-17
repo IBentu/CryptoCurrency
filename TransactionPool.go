@@ -13,10 +13,12 @@ type TransactionPool struct {
 
 // firstInit is the function that initiates the TP for the first time
 func (tp *TransactionPool) firstInit() {
+	tp.mutex = &sync.Mutex{}
 }
 
 // init initiates the TP after each startup
-func (tp *TransactionPool) init() {
+func (tp *TransactionPool) init() { // TODO: LOAD TRANSACTIONS FROM DB
+	tp.mutex = &sync.Mutex{}
 }
 
 // length returns the length of the transactions slice
