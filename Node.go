@@ -12,15 +12,13 @@ import (
 
 // Node is the client for miners
 type Node struct {
-	privKey         *ecdsa.PrivateKey
-	pubKey          ecdsa.PublicKey
-	blockchain      *Blockchain
-	transactionPool *TransactionPool
-	server          *NodeServer
-	recvChannel     chan *Packet
-	scmChannel      chan *Packet
-	stpmChannel     chan *Packet
-	mutex           *sync.Mutex
+	privKey          *ecdsa.PrivateKey
+	pubKey           ecdsa.PublicKey
+	blockchain       *Blockchain
+	transactionPool  *TransactionPool
+	server           *NodeServer
+	mutex            *sync.Mutex
+	allowChainUpdate bool
 }
 
 // init initiates the Node by loading a json settings file
@@ -35,11 +33,8 @@ func (n *Node) init(config *JSONConfig) {
 		D: big.NewInt(config.Node.PrivateKey.D),
 	}
 	n.pubKey = n.privKey.PublicKey
-	n.recvChannel = make(chan *Packet)
-	n.scmChannel = make(chan *Packet)
-	n.stpmChannel = make(chan *Packet)
 	n.server = &NodeServer{}
-	n.server.init(n, config.Addr, n.recvChannel, n.scmChannel, n.stpmChannel, n.privKey)
+	n.server.init(n, config)
 	n.blockchain = &Blockchain{}
 	n.blockchain.firstInit() // change to init later
 	n.transactionPool = &TransactionPool{}
@@ -47,7 +42,7 @@ func (n *Node) init(config *JSONConfig) {
 	go n.updateChain()
 	go n.updatePeers()
 	go n.updatePool()
-	go n.printBlockchain()
+	//go n.printBlockchain()
 }
 
 //firstInit initiates the Node for the first time, and saves to a json settings file
@@ -60,27 +55,20 @@ func (n *Node) firstInit(conf *JSONConfig) {
 	n.privKey = key
 	n.pubKey = key.PublicKey
 	n.mutex = &sync.Mutex{}
-	n.recvChannel = make(chan *Packet)
-	n.scmChannel = make(chan *Packet)
-	n.stpmChannel = make(chan *Packet)
 	n.blockchain.firstInit()
-	n.transactionPool.firstInit()
+	n.transactionPool.init()
 	n.server = &NodeServer{}
-	n.server.firstInit(conf, n, n.privKey)
+	n.server.init(n, conf)
 	n.blockchain.firstInit()
 	n.server.requestBlockchain()
 	n.server.requestPeers()
 	err1 := n.saveConfig()
 	err2 := n.blockchain.saveBlockchain()
-	err3 := n.server.savePeers()
 	if err1 != nil {
 		fmt.Printf("could not save config\n%s\n", err1)
 	}
 	if err2 != nil {
-		fmt.Printf("could not save blockchain\n%s\n", err2)
-	}
-	if err3 != nil {
-		fmt.Printf("could not save peers\n%s\n", err3)
+		fmt.Print(err2)
 	}
 	go n.updateChain()
 	go n.updatePeers()
@@ -101,6 +89,7 @@ func (n *Node) saveConfig() error {
 		return err
 	}
 	n.mutex.Lock()
+	config.Peers += n.server.peersToString()
 	config.Node.PrivateKey.D = n.privKey.D.Int64()
 	config.Node.PrivateKey.PublicKey.X = n.pubKey.X.Int64()
 	config.Node.PrivateKey.PublicKey.Y = n.pubKey.Y.Int64()
@@ -208,4 +197,14 @@ func (n *Node) updateChain() {
 		n.server.requestBlockchain()
 		time.Sleep(time.Minute)
 	}
+}
+
+// SetChainUpdate changes the status
+func (n *Node) SetChainUpdate(status bool) {
+	n.allowChainUpdate = status
+}
+
+// GetChainUpdate returns the status
+func (n *Node) GetChainUpdate() bool {
+	return n.allowChainUpdate
 }

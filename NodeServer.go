@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"fmt"
 	"sync"
 )
@@ -18,27 +17,20 @@ type NodeServer struct {
 
 const (
 
-	// ListenPort is the IP on which the Server is listening to
-	ListenPort = 1625
+	// ListenPort is the port on which the Server is listening to
+	ListenPort = 4416
 )
 
-func (n *NodeServer) init(node *Node, address string, recvChannel, sendChannel, stmpChannel chan *Packet, privKey *ecdsa.PrivateKey) {
-	n.communicator = NewCommunicator(address, n.recvChannel, n.sendChannel, ListenPort)
-	go n.communicator.Listen()
-}
-
-func (n *NodeServer) firstInit(conf *JSONConfig, node *Node, privKey *ecdsa.PrivateKey) {
+func (n *NodeServer) init(node *Node, config *JSONConfig) {
 	n.node = node
 	n.mutex = &sync.Mutex{}
-	n.peers = make([]string, 0)
 	n.recvChannel = make(chan *Packet)
 	n.sendChannel = make(chan *Packet)
-	n.communicator = NewCommunicator(conf.Addr, n.recvChannel, n.sendChannel, ListenPort)
+	n.communicator = NewCommunicator(config.Addr, n.recvChannel, n.sendChannel, ListenPort)
 	go n.communicator.Listen()
-	//go n.sendToPeers()
 }
 
-func (n *NodeServer) handlePackets() { // NOT FISNISHED
+func (n *NodeServer) handlePackets() {
 	for {
 		p := <-n.recvChannel
 		retP := &Packet{requestType: ""}
@@ -50,20 +42,23 @@ func (n *NodeServer) handlePackets() { // NOT FISNISHED
 		case PR:
 			retP = NewPacket(PA, FormatPA(n.peers))
 		case FT:
-			num, err := UnformatFT(p.data)
-			if err != nil {
-				fmt.Println(err)
-				break
+			if !n.node.GetChainUpdate() {
+				num, err := UnformatFT(p.data)
+				if err != nil {
+					fmt.Println(err)
+					break
+				}
+				retP = NewPacket(BP, FormatBP(n.node.blockchain.GetBlocksFromTop(num)))
 			}
-			retP = NewPacket(BP, FormatBP(n.node.blockchain.GetBlocksFromTop(num)))
 		case IS:
-			index, err := UnformatIS(p.data)
-			if err != nil {
-				fmt.Println(err)
-				break
+			if !n.node.GetChainUpdate() {
+				index, err := UnformatIS(p.data)
+				if err != nil {
+					fmt.Println(err)
+					break
+				}
+				retP = NewPacket(BP, FormatBP(n.node.blockchain.GetBlocksFromIndex(index)))
 			}
-			retP = NewPacket(BP, FormatBP(n.node.blockchain.GetBlocksFromIndex(index)))
-		case NT:
 		default:
 			fmt.Println(ErrPacketType)
 		}
@@ -76,9 +71,14 @@ func (n *NodeServer) Address() string {
 	return n.communicator.Address()
 }
 
-func (n *NodeServer) savePeers() error {
-	// save to database
-	return nil
+func (n *NodeServer) peersToString() string {
+	peers := ""
+	n.mutex.Lock()
+	for _, p := range n.peers {
+		peers += fmt.Sprintf(";%s", p)
+	}
+	n.mutex.Unlock()
+	return peers
 }
 
 func (n *NodeServer) doesPeerExist(peer string) bool {
@@ -90,7 +90,7 @@ func (n *NodeServer) doesPeerExist(peer string) bool {
 	return false
 }
 
-func (n *NodeServer) requestBlockchain() { /// TEST!!!
+func (n *NodeServer) requestBlockchain() {
 	for _, peer := range n.peers {
 		p := NewPacket(BR, []byte{})
 		p, err := n.communicator.SR1(peer, p)
@@ -124,10 +124,7 @@ func (n *NodeServer) requestBlockchain() { /// TEST!!!
 			fmt.Println(err)
 			continue
 		}
-		if n.node.blockchain.CompareBlockchains(blocks) {
-			n.node.blockchain.AddBlocks(blocks)
-			continue
-		}
+		allBlocks := blocks
 		for !n.node.blockchain.CompareBlockchains(blocks) {
 			p = NewPacket(IS, FormatIS(blocks[0].index))
 			p, err = n.communicator.SR1(peer, p)
@@ -143,7 +140,11 @@ func (n *NodeServer) requestBlockchain() { /// TEST!!!
 				fmt.Println(err)
 				continue
 			}
+			allBlocks = append(blocks, allBlocks...)
 		}
+		n.node.SetChainUpdate(true)
+		n.node.blockchain.ReplaceBlocks(allBlocks)
+		n.node.SetChainUpdate(false)
 	}
 }
 

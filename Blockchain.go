@@ -2,7 +2,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"math/big"
+	"os"
+	"path"
 	"sync"
 )
 
@@ -15,7 +19,7 @@ type Blockchain struct {
 
 // init initiates the blockchain at node startup
 func (bc *Blockchain) init() {
-	//TODO: Load the blockchain from database
+
 }
 
 // firstInit initiates the blockchain at the first startup
@@ -26,11 +30,58 @@ func (bc *Blockchain) firstInit() {
 	b.updateHash()
 	bc.blocks[0] = b
 	bc.mutex = &sync.Mutex{}
-	//put genesis Block values in first block
 }
 
 func (bc *Blockchain) saveBlockchain() error {
-	//TODO: save to database
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	errList := "failed to save blocks at indexes: "
+	bc.mutex.Lock()
+	for i := 0; i < len(bc.blocks); i++ {
+		dir = path.Join(dir, fmt.Sprintf("/Blockchain/%d.block", i))
+		data, err := bc.blocks[i].ToBytes()
+		if err != nil {
+			errList += string(i) + " "
+			continue
+		}
+		err = ioutil.WriteFile(dir, data, 0644)
+		if err != nil {
+			errList += string(i) + " "
+			continue
+		}
+	}
+	bc.mutex.Unlock()
+	return errors.New(errList)
+}
+
+func (bc *Blockchain) readBlockchain() error {
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	blocks := make([]*Block, 0)
+	bc.mutex.Lock()
+	TempBC := *bc
+	for i := 0; i < len(bc.blocks); i++ {
+		dir = path.Join(dir, fmt.Sprintf("/Blockchain/%d.block", i))
+		data, err := ioutil.ReadFile(dir)
+		if err != nil {
+			break
+		}
+		b, err := ToBlock(data)
+		if err != nil {
+			break
+		}
+		blocks = append(blocks, b)
+	}
+	if err != nil{
+		bc = &TempBC
+		return errors.New("Couldn't load blockchain")
+	}
+	bc.blocks = blocks
+	bc.mutex.Unlock()
 	return nil
 }
 
@@ -157,22 +208,42 @@ func (bc *Blockchain) GetBlocksFromIndex(index int) []*Block {
 	return blocks
 }
 
-// CompareBlockchains compares the recieved blockchain's bottom block with the current one's
-// top and returns the index of the first blocks who match hash-wise
+// CompareBlockchains compares the current blockchain top block's hash the recieved blocks's bottom block's hash
+// and returns true if they are the same
 func (bc *Blockchain) CompareBlockchains(blocks []*Block) bool {
-	hash, err := bc.GetHash(len(blocks) - 1)
+	hash, err := bc.GetHash(blocks[0].index)
 	if err != nil {
 		return false
 	}
-	return hash == blocks[0].hash
+	if hash == blocks[0].hash {
+		return true
+	}
+	return false
+}
+
+// ReplaceBlocks replaces a part of the blockchain with the recieved blocks
+func (bc *Blockchain) ReplaceBlocks(blocks []*Block) {
+	bc.mutex.Lock()
+	defer bc.mutex.Unlock()
+	index := blocks[0].index
+	for _, b := range bc.blocks[index:] {
+		delete(bc.hashMap, b.hash)
+	}
+	for _, b := range blocks {
+		bc.hashMap[b.hash] = b
+	}
+	bc.blocks = bc.blocks[:index]
+	bc.blocks = append(bc.blocks, blocks...)
 }
 
 // HashString returns a string of the hashes of the blockchain
 func (bc *Blockchain) HashString() string {
 	str := ""
-	for k := range bc.hashMap {
+	bc.mutex.Lock()
+	hMap := bc.hashMap
+	bc.mutex.Unlock()
+	for k := range hMap {
 		str += k + " --> "
 	}
 	return str + "null"
 }
-
