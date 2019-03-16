@@ -40,24 +40,10 @@ func (ws *WebServer) handlerGetBalance(w http.ResponseWriter, r *http.Request) {
 
 func handlerUI(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`
-    <html>
+<html>
     <head title="Wallet">
-    <script src="/static/elliptic.min.js></script>
-        <script>
-            function doCheckBalance() {
-
-                var xhr = new XMLHttpRequest();
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState == XMLHttpRequest.DONE) {
-                        var blc = document.getElementById("balance");
-                        blc.value = xhr.responseText
-                    }
-                }
-                var pk = document.getElementById("PublicKey").value;
-                xhr.open('GET', '/api/getBalance?pk='+pk, true);
-                xhr.send(null);
-            }
-        </script>
+        <script src="/static/elliptic.min.js></script>
+        <script src="/static/functions"></script>
     </head>
     Private Key: <input type="password" id="PrivateKey"></input>
     <br/>
