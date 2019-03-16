@@ -11,6 +11,7 @@ type NodeServer struct {
 	peers        []string
 	mutex        *sync.Mutex
 	communicator *Communicator
+	webServer    *WebServer
 	recvChannel  chan *Packet
 	sendChannel  chan *Packet
 }
@@ -24,10 +25,12 @@ const (
 func (n *NodeServer) init(node *Node, config *JSONConfig) {
 	n.node = node
 	n.mutex = &sync.Mutex{}
+	n.webServer = &WebServer{server: n}
 	n.recvChannel = make(chan *Packet)
 	n.sendChannel = make(chan *Packet)
 	n.communicator = NewCommunicator(config.Addr, n.recvChannel, n.sendChannel, ListenPort)
 	go n.communicator.Listen()
+	go n.webServer.Start()
 }
 
 func (n *NodeServer) handlePackets() {

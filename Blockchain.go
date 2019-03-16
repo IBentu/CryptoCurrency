@@ -38,6 +38,7 @@ func (bc *Blockchain) saveBlockchain() error {
 		return err
 	}
 	errList := "failed to save blocks at indexes: "
+	errListCopy := errList
 	bc.mutex.Lock()
 	for i := 0; i < len(bc.blocks); i++ {
 		dir = path.Join(dir, fmt.Sprintf("/Blockchain/%d.block", i))
@@ -53,7 +54,10 @@ func (bc *Blockchain) saveBlockchain() error {
 		}
 	}
 	bc.mutex.Unlock()
-	return errors.New(errList)
+	if errList != errListCopy {
+		return errors.New(errList)
+	}
+	return nil
 }
 
 func (bc *Blockchain) readBlockchain() error {
@@ -76,7 +80,7 @@ func (bc *Blockchain) readBlockchain() error {
 		}
 		blocks = append(blocks, b)
 	}
-	if err != nil{
+	if err != nil {
 		bc = &TempBC
 		return errors.New("Couldn't load blockchain")
 	}
@@ -240,10 +244,9 @@ func (bc *Blockchain) ReplaceBlocks(blocks []*Block) {
 func (bc *Blockchain) HashString() string {
 	str := ""
 	bc.mutex.Lock()
-	hMap := bc.hashMap
-	bc.mutex.Unlock()
-	for k := range hMap {
-		str += k + " --> "
+	defer bc.mutex.Unlock()
+	for _, b := range bc.blocks {
+		str += b.hash + " --> "
 	}
 	return str + "null"
 }

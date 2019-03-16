@@ -1,14 +1,1 @@
-{
-    "Addr":"",
-    "Node":{
-        "FirstInit":false,
-        "PrivateKey":{
-            "PublicKey":{
-                "X":0,
-                "Y":0
-            },
-            "D":0
-        }
-    },
-    "Peers":"10.0.0.183"
-}
+{"Addr":"","Node":{"FirstInit":false,"PrivateKey":{"PublicKey":{"X":7246653041916313078,"Y":-9202017697643958174},"D":2947147926200685079}},"Peers":"10.0.0.183"}

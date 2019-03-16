@@ -36,7 +36,7 @@ func (n *Node) init(config *JSONConfig) {
 	n.server = &NodeServer{}
 	n.server.init(n, config)
 	n.blockchain = &Blockchain{}
-	n.blockchain.firstInit() // change to init later
+	n.blockchain.init() // change to init later
 	n.transactionPool = &TransactionPool{}
 	n.transactionPool.init()
 	go n.updateChain()
@@ -55,11 +55,12 @@ func (n *Node) firstInit(conf *JSONConfig) {
 	n.privKey = key
 	n.pubKey = key.PublicKey
 	n.mutex = &sync.Mutex{}
+	n.blockchain = &Blockchain{}
+	n.transactionPool = &TransactionPool{}
+	n.server = &NodeServer{}
 	n.blockchain.firstInit()
 	n.transactionPool.init()
-	n.server = &NodeServer{}
 	n.server.init(n, conf)
-	n.blockchain.firstInit()
 	n.server.requestBlockchain()
 	n.server.requestPeers()
 	err1 := n.saveConfig()
@@ -73,6 +74,7 @@ func (n *Node) firstInit(conf *JSONConfig) {
 	go n.updateChain()
 	go n.updatePeers()
 	go n.updatePool()
+	go n.printBlockchain()
 }
 
 func (n *Node) printBlockchain() {
@@ -140,7 +142,7 @@ func (n *Node) mine() bool {
 // checkBalance goes through the blockchain, checks and returns the balance of a certain PublicKey
 func (n *Node) checkBalance(key ecdsa.PublicKey) int {
 	sum := 0
-	for i := 0; i < n.blockchain.Length(); i++ {
+	for i := 1; i < n.blockchain.Length(); i++ {
 		if n.blockchain.GetBlock(i).miner == key {
 			sum += 50 // decide how much money to reward miners. for now 50
 		}

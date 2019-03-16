@@ -4,11 +4,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	crand "crypto/rand"
+	//"math/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net"
 	"os"
 	"path"
@@ -20,6 +20,7 @@ func main() {
 	//realMain()
 	tempMain()
 }
+
 func realMain() {
 	config, err := readJSON()
 	checkError(err)
@@ -35,7 +36,7 @@ func realMain() {
 }
 
 func tempMain() {
-	config, err := readJSON()
+	/*config, err := readJSON()
 	checkError(err)
 	var node Node
 	node.init(config)
@@ -51,7 +52,23 @@ func tempMain() {
 	node.mine()
 	peerStr := config.Peers
 	splat := strings.Split(peerStr, ";")
-	node.server.peers = append(node.server.peers, splat...)
+	node.server.peers = append(node.server.peers, splat...)*/
+	config, err := readJSON()
+	checkError(err)
+	var node Node
+	node.firstInit(config)
+	key, err := ecdsa.GenerateKey(elliptic.P256(), crand.Reader)
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+	node.mine()
+	for i := 0; i < 2; i++ {
+		node.makeTransaction(key.PublicKey, 5)
+	}
+	node.mine()
+	fmt.Printf("node key: %d-%d\n", node.pubKey.X, node.pubKey.Y)
+	fmt.Printf("other key: %d-%d\n", key.PublicKey.X, key.PublicKey.Y)
 	time.Sleep(3 * time.Minute)
 }
 
