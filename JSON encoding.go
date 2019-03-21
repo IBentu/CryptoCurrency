@@ -2,7 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"math/big"
+	"os"
+	"path"
 )
 
 // JSONTransaction is a struct intended for Json encoding and decoding
@@ -113,4 +116,32 @@ type JSONConfig struct {
 	Addr  string
 	Node  JSONNode
 	Peers string
+}
+
+func readJSON() (*JSONConfig, error) {
+	dir, err := os.Getwd()
+	checkError(err)
+	dir = path.Join(dir, "/config.json")
+	data, err := ioutil.ReadFile(dir)
+	if err != nil {
+		return nil, err
+	}
+	var config JSONConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
+	}
+	return &config, err
+}
+
+func writeJSON(config *JSONConfig) error {
+	data, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+	dir, err := os.Getwd()
+	checkError(err)
+	dir = path.Join(dir, "/config.json")
+	err = ioutil.WriteFile(dir, data, 0644)
+	return err
 }

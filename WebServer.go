@@ -17,7 +17,6 @@ func (ws *WebServer) handlerSendTransaction(w http.ResponseWriter, r *http.Reque
 	trx, err2 := UnformatTransaction(body)
 	if err1 == nil && err2 == nil && ws.server.node.verifyTransaction(trx) {
 		ws.server.node.transactionPool.addTransaction(trx)
-		ws.server.node.mine()
 		w.Write([]byte("Transaction Accepted."))
 	} else {
 		w.Write([]byte("Transaction Rejected."))

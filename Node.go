@@ -34,8 +34,10 @@ func (n *Node) init(config *JSONConfig) {
 	go n.updateChain()
 	go n.updatePeers()
 	go n.updatePool()
-	//go n.printBlockchain()
+	go n.periodicMine()
+	go n.periodicSave()
 	fmt.Println("The node is up!")
+	n.printBlockchain()
 }
 
 //firstInit initiates the Node for the first time, and saves to a json settings file
@@ -53,24 +55,18 @@ func (n *Node) firstInit(conf *JSONConfig) {
 	n.server.init(n, conf)
 	n.server.requestBlockchain()
 	n.server.requestPeers()
-	err1 := n.saveConfig()
-	err2 := n.blockchain.saveBlockchain()
-	if err1 != nil {
-		fmt.Printf("could not save config\n%s\n", err1)
-	}
-	if err2 != nil {
-		fmt.Println(err2)
-	}
 	go n.updateChain()
 	go n.updatePeers()
 	go n.updatePool()
-	//go n.printBlockchain()
+	go n.periodicMine()
+	go n.periodicSave()
 	fmt.Println("The node is up!")
+	n.printBlockchain()
 }
 
 func (n *Node) printBlockchain() {
 	for {
-		time.Sleep(30 * time.Second)
+		time.Sleep(time.Minute)
 		fmt.Println(n.blockchain.HashString())
 	}
 }
@@ -200,4 +196,26 @@ func (n *Node) SetChainUpdate(status bool) {
 // GetChainUpdate returns the status
 func (n *Node) GetChainUpdate() bool {
 	return n.allowChainUpdate
+}
+
+// periodicMine mines every 1 minute
+func (n *Node) periodicMine() {
+	for {
+		n.mine()
+		time.Sleep(time.Minute)
+	}
+}
+
+func (n *Node) periodicSave() {
+	for {
+		err1 := n.saveConfig()
+		err2 := n.blockchain.saveBlockchain()
+		if err1 != nil {
+			fmt.Printf("could not save config\n%s\n", err1)
+		}
+		if err2 != nil {
+			fmt.Println(err2)
+		}
+		time.Sleep(time.Minute * 5)
+	}
 }
