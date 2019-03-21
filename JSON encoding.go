@@ -1,20 +1,18 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
 	"math/big"
 )
 
 // JSONTransaction is a struct intended for Json encoding and decoding
 type JSONTransaction struct {
-	SenderKey    ecdsa.PublicKey `json:"senderKey"`
-	RecipientKey ecdsa.PublicKey `json:"recipientKey"`
-	Amount       int             `json:"amount"`
-	Timestamp    int64           `json:"timestamp"`
-	Hash         string          `json:"hash"`
-	SignR        *big.Int        `json:"signR"`
-	SignS        *big.Int        `json:"signS"`
+	SenderKey    string `json:"senderKey"`
+	RecipientKey string `json:"recipientKey"`
+	Amount       int    `json:"amount"`
+	Timestamp    int64  `json:"timestamp"`
+	Hash         string `json:"hash"`
+	Sign         string `json:"sign"`
 }
 
 // MarshalJSON is an Implementation of Marshaler
@@ -25,8 +23,7 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		Amount:       t.amount,
 		Timestamp:    t.timestamp,
 		Hash:         t.hash,
-		SignR:        t.signR,
-		SignS:        t.signS,
+		Sign:         t.sign,
 	}
 	return json.Marshal(jt)
 }
@@ -43,8 +40,7 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 		amount:       jt.Amount,
 		timestamp:    jt.Timestamp,
 		hash:         jt.Hash,
-		signR:        jt.SignR,
-		signS:        jt.SignS,
+		sign:         jt.Sign,
 	}
 	return nil
 }
@@ -53,13 +49,13 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 
 // JSONBlock is a struct intended for Json encoding and decoding
 type JSONBlock struct {
-	Index        int             `json:"index"`
-	Timestamp    int64           `json:"timestamp"`
-	Transactions []*Transaction  `json:"transactions"`
-	Miner        ecdsa.PublicKey `json:"miner"`
-	Hash         string          `json:"hash"`
-	PrevHash     string          `json:"prevHash"`
-	Filler       *big.Int        `json:"filler"`
+	Index        int            `json:"index"`
+	Timestamp    int64          `json:"timestamp"`
+	Transactions []*Transaction `json:"transactions"`
+	Miner        string         `json:"miner"`
+	Hash         string         `json:"hash"`
+	PrevHash     string         `json:"prevHash"`
+	Filler       *big.Int       `json:"filler"`
 }
 
 // MarshalJSON is an Implementation of Marshaler
@@ -98,20 +94,9 @@ func (b *Block) UnmarshalJSON(data []byte) error {
 
 // JSONNode is a data type for the json settings file
 type JSONNode struct {
-	FirstInit  bool           `json:"FirstInit"`
-	PrivateKey JSONPrivateKey `json:"PrivateKey"`
-}
-
-// JSONPrivateKey is a data sub-type for the json settings file
-type JSONPrivateKey struct {
-	PublicKey JSONPublicKey `json:"PublicKey"`
-	D         int64         `json:"D"`
-}
-
-// JSONPublicKey is a data sub-type for the json settings file
-type JSONPublicKey struct {
-	X int64 `json:"X"`
-	Y int64 `json:"Y"`
+	FirstInit  bool   `json:"FirstInit"`
+	PrivateKey string `json:"PrivateKey"`
+	PublicKey  string `json:"PublicKey"`
 }
 
 // checkError calls panic() with the recieved error in case err != nil

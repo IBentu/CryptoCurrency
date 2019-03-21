@@ -1,62 +1,29 @@
 package main
 
-import (
-	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
-	"math/big"
-)
+import "fmt"
 
 // Transaction is a single transaction and is saved on the blockchain in it
 type Transaction struct {
-	senderKey    ecdsa.PublicKey
-	recipientKey ecdsa.PublicKey
+	senderKey    string
+	recipientKey string
 	amount       int
 	timestamp    int64
 	hash         string
-	signR        *big.Int
-	signS        *big.Int
+	sign         string
 }
 
 // toString returns all the Transaction's fields that need to be hashed as a formatted
-func (t *Transaction) toString() string {
-	return pubKeyToString(t.senderKey) + pubKeyToString(t.recipientKey) + string(t.amount) + string(t.timestamp)
+func (t *Transaction) toHashString() string {
+	return fmt.Sprintf("%s%s%d%d", t.senderKey, t.recipientKey, t.amount, t.timestamp)
 }
 
-//transactionSliceToByteSlice returns a byte slice that can be hashed
+//transactionSliceToByteSlice returns a string that can be hashed
 func transactionSliceToString(transactions []*Transaction) string {
 	str := ""
 	for i := 0; i < len(transactions); i++ {
-		str += transactions[i].toString()
+		str += transactions[i].toHashString()
 	}
 	return str
-}
-
-// returns a string of a PublicKey
-func pubKeyToString(k ecdsa.PublicKey) string {
-	if k.X != nil {
-		return string(k.X.Bytes()) + string(k.Y.Bytes())
-	}
-	return ""
-}
-
-// hashTransaction hashes the transaction
-func (t *Transaction) hashTransaction() {
-	hash := sha256.New()
-	hash.Write([]byte(t.toString()))
-	checksum := hash.Sum(nil)
-	t.hash = hex.EncodeToString(checksum)
-}
-
-// sign signs a Transaction with a PrivateKey
-func (t *Transaction) sign(k *ecdsa.PrivateKey) error {
-	r, s, err := ecdsa.Sign(rand.Reader, k, []byte(t.hash))
-	if err == nil {
-		t.signR = r
-		t.signS = s
-	}
-	return err
 }
 
 // Format formats a Transaction to a []byte

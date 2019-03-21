@@ -12,20 +12,23 @@ import (
 
 // Blockchain is the database for all the blocks
 type Blockchain struct {
-	blocks  []*Block
-	hashMap map[string]*Block
-	mutex   *sync.Mutex
+	blocks []*Block
+	mutex  *sync.Mutex
 }
 
 // init initiates the blockchain at node startup
 func (bc *Blockchain) init() {
-
+	bc.blocks = []*Block{}
+	bc.mutex = &sync.Mutex{}
+	err := bc.readBlockchain()
+	if err != nil {
+		fmt.Print(err)
+	}
 }
 
 // firstInit initiates the blockchain at the first startup
 func (bc *Blockchain) firstInit() {
 	bc.blocks = make([]*Block, 1)
-	bc.hashMap = make(map[string]*Block, 1)
 	b := &Block{index: 0, timestamp: 0, transactions: make([]*Transaction, 0), prevHash: "", filler: big.NewInt(0)}
 	b.updateHash()
 	bc.blocks[0] = b
@@ -37,12 +40,11 @@ func (bc *Blockchain) saveBlockchain() error {
 	if err != nil {
 		return err
 	}
-	errList := "failed to save blocks at indexes: "
-	errListCopy := errList
+	errList := ""
 	bc.mutex.Lock()
 	for i := 0; i < len(bc.blocks); i++ {
 		dir = path.Join(dir, fmt.Sprintf("/Blockchain/%d.block", i))
-		data, err := bc.blocks[i].ToBytes()
+		data, err := bc.blocks[i].MarshalJSON()
 		if err != nil {
 			errList += string(i) + " "
 			continue
@@ -54,8 +56,8 @@ func (bc *Blockchain) saveBlockchain() error {
 		}
 	}
 	bc.mutex.Unlock()
-	if errList != errListCopy {
-		return errors.New(errList)
+	if len(errList) > 2 {
+		return fmt.Errorf("failed to save blocks at indexes: %s", errList)
 	}
 	return nil
 }
@@ -74,7 +76,8 @@ func (bc *Blockchain) readBlockchain() error {
 		if err != nil {
 			break
 		}
-		b, err := ToBlock(data)
+		b := &Block{}
+		err = b.UnmarshalJSON(data)
 		if err != nil {
 			break
 		}
@@ -132,7 +135,6 @@ func (bc *Blockchain) GetHash(index int) (string, error) {
 func (bc *Blockchain) AddBlock(b *Block) {
 	bc.mutex.Lock()
 	bc.blocks = append(bc.blocks, b)
-	bc.hashMap[b.hash] = b
 	bc.mutex.Unlock()
 }
 
@@ -230,12 +232,6 @@ func (bc *Blockchain) ReplaceBlocks(blocks []*Block) {
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 	index := blocks[0].index
-	for _, b := range bc.blocks[index:] {
-		delete(bc.hashMap, b.hash)
-	}
-	for _, b := range blocks {
-		bc.hashMap[b.hash] = b
-	}
 	bc.blocks = bc.blocks[:index]
 	bc.blocks = append(bc.blocks, blocks...)
 }

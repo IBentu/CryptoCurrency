@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -25,6 +26,14 @@ const (
 func (n *NodeServer) init(node *Node, config *JSONConfig) {
 	n.node = node
 	n.mutex = &sync.Mutex{}
+	n.peers = []string{}
+	peerStr := config.Peers
+	splat := strings.Split(peerStr, ";")
+	if len(splat) > 0 {
+		if splat[0] != "" {
+			n.peers = append(node.server.peers, splat...)
+		}
+	}
 	n.webServer = &WebServer{server: n}
 	n.recvChannel = make(chan *Packet)
 	n.sendChannel = make(chan *Packet)
@@ -48,7 +57,6 @@ func (n *NodeServer) handlePackets() {
 			if !n.node.GetChainUpdate() {
 				num, err := UnformatFT(p.data)
 				if err != nil {
-					fmt.Println(err)
 					break
 				}
 				retP = NewPacket(BP, FormatBP(n.node.blockchain.GetBlocksFromTop(num)))
@@ -57,13 +65,11 @@ func (n *NodeServer) handlePackets() {
 			if !n.node.GetChainUpdate() {
 				index, err := UnformatIS(p.data)
 				if err != nil {
-					fmt.Println(err)
 					break
 				}
 				retP = NewPacket(BP, FormatBP(n.node.blockchain.GetBlocksFromIndex(index)))
 			}
 		default:
-			fmt.Println(ErrPacketType)
 		}
 		n.sendChannel <- retP
 	}
@@ -98,16 +104,13 @@ func (n *NodeServer) requestBlockchain() {
 		p := NewPacket(BR, []byte{})
 		p, err := n.communicator.SR1(peer, p)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 		if p.Type() != SCM {
-			fmt.Println(err)
 			continue
 		}
 		index, _, err := UnformatSCM(p.data)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 		if index <= n.node.blockchain.GetLatestIndex() {
@@ -116,7 +119,6 @@ func (n *NodeServer) requestBlockchain() {
 		p = NewPacket(FT, FormatFT(index-n.node.blockchain.GetLatestIndex()))
 		p, err = n.communicator.SR1(peer, p)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 		if p.Type() != BP {
@@ -124,7 +126,6 @@ func (n *NodeServer) requestBlockchain() {
 		}
 		blocks, err := UnformatBP(p.data)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 		allBlocks := blocks
@@ -132,7 +133,6 @@ func (n *NodeServer) requestBlockchain() {
 			p = NewPacket(IS, FormatIS(blocks[0].index))
 			p, err = n.communicator.SR1(peer, p)
 			if err != nil {
-				fmt.Println(err)
 				continue
 			}
 			if p.Type() != BP {
@@ -140,7 +140,6 @@ func (n *NodeServer) requestBlockchain() {
 			}
 			blocks, err = UnformatBP(p.data)
 			if err != nil {
-				fmt.Println(err)
 				continue
 			}
 			allBlocks = append(blocks, allBlocks...)
@@ -156,11 +155,9 @@ func (n *NodeServer) requestPeers() {
 		p := NewPacket(PR, []byte{})
 		p, err := n.communicator.SR1(peer, p)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 		if p.Type() != PA {
-			fmt.Println(ErrPacketType)
 			continue
 		}
 		addrs := UnformatPA(p.data)
@@ -181,16 +178,13 @@ func (n *NodeServer) requestPool() {
 		p := NewPacket(TPR, []byte{})
 		p, err := n.communicator.SR1(peer, p)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 		if p.Type() != STPM {
-			fmt.Println(ErrPacketType)
 			continue
 		}
 		trans, err := UnformatSTPM(p.data)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 		for _, t := range trans {

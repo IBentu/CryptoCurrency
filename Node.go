@@ -1,19 +1,18 @@
 package main
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"fmt"
 	"math/big"
 	"sync"
 	"time"
+
+	ec "github.com/IBentu/CryptoCurrency/EClib"
 )
 
 // Node is the client for miners
 type Node struct {
-	privKey          *ecdsa.PrivateKey
-	pubKey           ecdsa.PublicKey
+	privKey          string
+	pubKey           string
 	blockchain       *Blockchain
 	transactionPool  *TransactionPool
 	server           *NodeServer
@@ -24,15 +23,8 @@ type Node struct {
 // init initiates the Node by loading a json settings file
 func (n *Node) init(config *JSONConfig) {
 	n.mutex = &sync.Mutex{}
-	n.privKey = &ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: elliptic.P256(),
-			X:     big.NewInt(config.Node.PrivateKey.PublicKey.X),
-			Y:     big.NewInt(config.Node.PrivateKey.PublicKey.Y),
-		},
-		D: big.NewInt(config.Node.PrivateKey.D),
-	}
-	n.pubKey = n.privKey.PublicKey
+	n.privKey = config.Node.PrivateKey
+	n.pubKey = config.Node.PublicKey
 	n.server = &NodeServer{}
 	n.server.init(n, config)
 	n.blockchain = &Blockchain{}
@@ -43,17 +35,15 @@ func (n *Node) init(config *JSONConfig) {
 	go n.updatePeers()
 	go n.updatePool()
 	//go n.printBlockchain()
+	fmt.Println("The node is up!")
 }
 
 //firstInit initiates the Node for the first time, and saves to a json settings file
 func (n *Node) firstInit(conf *JSONConfig) {
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
-	n.privKey = key
-	n.pubKey = key.PublicKey
+	priv, pub := ec.ECGenerateKey()
+	fmt.Printf("Generated Keys:\n    Private: %s\n    Public: %s\n", priv, pub)
+	n.privKey = priv
+	n.pubKey = pub
 	n.mutex = &sync.Mutex{}
 	n.blockchain = &Blockchain{}
 	n.transactionPool = &TransactionPool{}
@@ -69,12 +59,13 @@ func (n *Node) firstInit(conf *JSONConfig) {
 		fmt.Printf("could not save config\n%s\n", err1)
 	}
 	if err2 != nil {
-		fmt.Print(err2)
+		fmt.Println(err2)
 	}
 	go n.updateChain()
 	go n.updatePeers()
 	go n.updatePool()
-	go n.printBlockchain()
+	//go n.printBlockchain()
+	fmt.Println("The node is up!")
 }
 
 func (n *Node) printBlockchain() {
@@ -92,9 +83,8 @@ func (n *Node) saveConfig() error {
 	}
 	n.mutex.Lock()
 	config.Peers += n.server.peersToString()
-	config.Node.PrivateKey.D = n.privKey.D.Int64()
-	config.Node.PrivateKey.PublicKey.X = n.pubKey.X.Int64()
-	config.Node.PrivateKey.PublicKey.Y = n.pubKey.Y.Int64()
+	config.Node.PrivateKey = n.privKey
+	config.Node.PublicKey = n.pubKey
 	config.Addr = n.server.Address()
 	n.mutex.Unlock()
 	return writeJSON(config)
@@ -102,10 +92,12 @@ func (n *Node) saveConfig() error {
 
 // verifyTransaction checks the blockchain if the transaction is legal (enough credits to send), and verifies the transactionSign, and also double spending
 func (n *Node) verifyTransaction(t *Transaction) bool {
-	signed := ecdsa.Verify(&t.senderKey, []byte(t.hash), t.signR, t.signS)
+	signed := ec.ECVerify(t.hash, t.sign, t.senderKey)
+	hash := ec.ECHashString(t.toHashString())
+	validHash := hash == t.hash
 	validBalance := t.amount <= n.checkBalance(t.senderKey)
 	noDoubleSpending := !n.blockchain.DoesTransactionExist(t)
-	return signed && validBalance && noDoubleSpending
+	return signed && validBalance && noDoubleSpending && validHash
 }
 
 // mine creates a block using the TransactionPool, returns true if a block was created and false otherwise
@@ -140,17 +132,18 @@ func (n *Node) mine() bool {
 }
 
 // checkBalance goes through the blockchain, checks and returns the balance of a certain PublicKey
-func (n *Node) checkBalance(key ecdsa.PublicKey) int {
+func (n *Node) checkBalance(key string) int {
 	sum := 0
 	for i := 1; i < n.blockchain.Length(); i++ {
-		if n.blockchain.GetBlock(i).miner == key {
+		currBlock := n.blockchain.GetBlock(i)
+		if currBlock.miner == key {
 			sum += 50 // decide how much money to reward miners. for now 50
 		}
-		for j := 0; j < len(n.blockchain.GetBlock(i).transactions); j++ {
-			if n.blockchain.GetBlock(i).transactions[j].senderKey == key {
-				sum -= n.blockchain.GetBlock(i).transactions[j].amount
-			} else if n.blockchain.GetBlock(i).transactions[j].recipientKey == key {
-				sum += n.blockchain.GetBlock(i).transactions[j].amount
+		for j := 0; j < len(currBlock.transactions); j++ {
+			if currBlock.transactions[j].senderKey == key {
+				sum -= currBlock.transactions[j].amount
+			} else if currBlock.transactions[j].recipientKey == key {
+				sum += currBlock.transactions[j].amount
 			}
 		}
 	}
@@ -159,20 +152,18 @@ func (n *Node) checkBalance(key ecdsa.PublicKey) int {
 
 // makeTransaction create a trnsaction adds it to the pool and returns true if transaction is legal,
 // otherwise it returns false
-func (n *Node) makeTransaction(recipient ecdsa.PublicKey, amount int) bool {
+func (n *Node) makeTransaction(recipient string, amount int) bool {
 	var t Transaction
-	if amount < n.checkBalance(n.pubKey) {
+	cb := n.checkBalance(n.pubKey)
+	if amount > cb {
 		return false
 	}
 	t.amount = amount
 	t.recipientKey = recipient
 	t.senderKey = n.pubKey
 	t.timestamp = GetCurrentMillis()
-	t.hashTransaction()
-	err := t.sign(n.privKey)
-	if err != nil {
-		return false
-	}
+	t.hash = ec.ECHashString(t.toHashString())
+	t.sign = ec.ECSign(t.hash, n.privKey, n.pubKey)
 	n.transactionPool.addTransaction(&t)
 	return true
 }

@@ -1,9 +1,7 @@
 package main
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	crand "crypto/rand"
+
 	//"math/rand"
 	"encoding/json"
 	"errors"
@@ -14,6 +12,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	ec "github.com/IBentu/CryptoCurrency/EClib"
 )
 
 func main() {
@@ -36,40 +36,18 @@ func realMain() {
 }
 
 func tempMain() {
-	/*config, err := readJSON()
-	checkError(err)
-	var node Node
-	node.init(config)
-	key, err := ecdsa.GenerateKey(elliptic.P256(), crand.Reader)
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
-	for i := 0; i < 8; i++ {
-		node.makeTransaction(key.PublicKey, rand.Intn(100))
-	}
-	node.mine()
-	node.mine()
-	peerStr := config.Peers
-	splat := strings.Split(peerStr, ";")
-	node.server.peers = append(node.server.peers, splat...)*/
 	config, err := readJSON()
 	checkError(err)
 	var node Node
 	node.firstInit(config)
-	key, err := ecdsa.GenerateKey(elliptic.P256(), crand.Reader)
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
+	_, pub := ec.ECGenerateKey()
 	node.mine()
 	for i := 0; i < 2; i++ {
-		node.makeTransaction(key.PublicKey, 5)
+		node.makeTransaction(pub, 5)
 	}
 	node.mine()
-	fmt.Printf("node key: %d-%d\n", node.pubKey.X, node.pubKey.Y)
-	fmt.Printf("other key: %d-%d\n", key.PublicKey.X, key.PublicKey.Y)
-	time.Sleep(3 * time.Minute)
+	fmt.Println("done!")
+	time.Sleep(10 * time.Minute)
 }
 
 func readJSON() (*JSONConfig, error) {

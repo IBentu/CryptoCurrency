@@ -21,7 +21,7 @@ func NewCommunicator(address string, recievedPacket, answerPacket chan *Packet, 
 
 // SR1 sends 1 Packet to address and returns the recieved packet
 func (c *Communicator) SR1(address string, p *Packet) (*Packet, error) {
-	fmt.Printf("Connecting to %s:%d...\n", address, c.port)
+	//fmt.Printf("Connecting to %s:%d...\n", address, c.port)
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", address, c.port))
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func (c *Communicator) SR1(address string, p *Packet) (*Packet, error) {
 
 // Listen listens for oncoming connections, recieves 1 Packet and sends one packet back
 func (c *Communicator) Listen() error {
-	fmt.Println("Listening for nodes...")
+	//fmt.Println("Listening for nodes...")
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", c.port))
 	if err != nil {
 		return err
@@ -49,13 +49,11 @@ func (c *Communicator) Listen() error {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
-		fmt.Println("Connected!")
+		//fmt.Println("Connected!")
 		msg, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {
-			fmt.Println(err)
 			conn.Close()
 			continue
 		}
@@ -63,12 +61,9 @@ func (c *Communicator) Listen() error {
 		p := ToPacket([]byte(msg))
 		c.recievedPacket <- p
 		p = <-c.answerPacket
-		_, err = conn.Write(append(p.bytes(), byte('\n')))
-		if err != nil {
-			fmt.Println(err)
-		}
+		conn.Write(append(p.bytes(), byte('\n')))
 		conn.Close()
-		fmt.Println("Connection closed.")
+		//fmt.Println("Connection closed.")
 	}
 }
 

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 )
 
@@ -11,17 +11,18 @@ import (
 type Block struct {
 	index        int
 	timestamp    int64
+	miner        string
 	transactions []*Transaction
-	miner        ecdsa.PublicKey
-	hash         string
 	prevHash     string
 	filler       *big.Int
+	hash         string
 }
 
 // updateHash updates the block hash
 func (b *Block) updateHash() {
 	hash := sha256.New()
-	data := string(b.index) + string(b.timestamp) + transactionSliceToString(b.transactions) + pubKeyToString(b.miner) + b.prevHash + b.filler.String()
+	data := fmt.Sprintf("%d%d%s%s%s%d", b.index, b.timestamp, b.miner,
+		transactionSliceToString(b.transactions), b.prevHash, b.filler)
 	hash.Write([]byte(data))
 	hashChecksum := hash.Sum(nil)
 	b.hash = hex.EncodeToString(hashChecksum)

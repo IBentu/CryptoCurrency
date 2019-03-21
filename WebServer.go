@@ -1,13 +1,10 @@
 package main
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"fmt"
-	"math/big"
+	"io/ioutil"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 // WebServer is resposible for handling wallet (client) requests in http
@@ -15,59 +12,34 @@ type WebServer struct {
 	server *NodeServer
 }
 
-func (ws *WebServer) handlerGetBalance(w http.ResponseWriter, r *http.Request) {
-	//w.Header().Set("Access-Control-Allow-Origin", "*")
-	pk := r.URL.Query().Get("pk")
-	XY := strings.Split(pk, "-")
-	res := "Invalid Public Key"
-	if len(XY) == 2 {
-        X := new(big.Int)
-        Y := new(big.Int)
-        X, ok1 := X.SetString(XY[0], 10)
-        Y, ok2 := Y.SetString(XY[1], 10)
-		if ok1 && ok2 {
-			key := ecdsa.PublicKey{
-				X:     X,
-				Y:     Y,
-				Curve: elliptic.P256(),
-			}
-            bal := ws.server.node.checkBalance(key)
-			res = strconv.Itoa(bal)
-        }
+func (ws *WebServer) handlerSendTransaction(w http.ResponseWriter, r *http.Request) {
+	body, err1 := ioutil.ReadAll(r.Body)
+	trx, err2 := UnformatTransaction(body)
+	if err1 == nil && err2 == nil && ws.server.node.verifyTransaction(trx) {
+		ws.server.node.transactionPool.addTransaction(trx)
+		ws.server.node.mine()
+		w.Write([]byte("Transaction Accepted."))
+	} else {
+		w.Write([]byte("Transaction Rejected."))
 	}
-	w.Write([]byte(res))
+}
+
+func (ws *WebServer) handlerGetBalance(w http.ResponseWriter, r *http.Request) {
+	pk := r.URL.Query().Get("pk")
+	bal := ws.server.node.checkBalance(pk)
+	w.Write([]byte(strconv.Itoa(bal)))
 }
 
 func handlerUI(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(`
-<html>
-    <head title="Wallet">
-        <script src="/static/elliptic.min.js></script>
-        <script src="/static/functions"></script>
-    </head>
-    Private Key: <input type="password" id="PrivateKey"></input>
-    <br/>
-    Public Key: <input type="input" id="PublicKey"></input>
-    <br/>
-    Balance: <input type="input" id="balance" readonly="true"></input>
-    <input type="button" onclick="doCheckBalance()" value="Check Balance"></input>
-    <br/>
-    <br/>
-    Money To Send: <input type="input" id="amount"></input>
-    <br/>
-    Recipient: <input type="input" id="amount"></input>
-    <br/>
-    <input type="button" onclick="sendMoney()" value="Send"></input>
-</html>
-    `))
-
+	http.ServeFile(w, r, "wallet.html")
 }
 
 // Start initiates the webServer. run with a goroutine
 func (ws *WebServer) Start() {
-    fs := http.FileServer(http.Dir("static"))
-    http.Handle("/static", fs)
+
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/api/getBalance", ws.handlerGetBalance)
-	http.HandleFunc("/", handlerUI)
+	http.HandleFunc("/wallet", handlerUI)
+	http.HandleFunc("/api/sendTransaction", ws.handlerSendTransaction)
 	http.ListenAndServe(fmt.Sprintf(":%d", ListenPort+1), nil)
 }
