@@ -2,3 +2,5 @@
 debug.*
 debug
 *.exe
+/Blockchain/*.block
+!Blockchain/0.Block
