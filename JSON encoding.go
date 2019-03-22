@@ -121,7 +121,7 @@ type JSONConfig struct {
 func readJSON() (*JSONConfig, error) {
 	dir, err := os.Getwd()
 	checkError(err)
-	dir = path.Join(dir, "/config.json")
+	dir = path.Join(dir, "Config/config.json")
 	data, err := ioutil.ReadFile(dir)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func writeJSON(config *JSONConfig) error {
 	}
 	dir, err := os.Getwd()
 	checkError(err)
-	dir = path.Join(dir, "/config.json")
+	dir = path.Join(dir, "Config/config.json")
 	err = ioutil.WriteFile(dir, data, 0644)
 	return err
 }

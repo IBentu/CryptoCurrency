@@ -20,21 +20,28 @@ func runNode() {
 	checkError(err)
 	var node Node
 	if config.Node.FirstInit {
+		priv, pub := ec.ECGenerateKey()
+		fmt.Printf("Generated Keys:\n    Private: %s\n    Public: %s\n", priv, pub)
 		config.Node.FirstInit = false
+		config.Node.PrivateKey = priv
+		config.Node.PublicKey = pub
 		err = writeJSON(config)
 		checkError(err)
-		node.firstInit(config)
-	} else {
-		node.init(config)
 	}
+	node.init(config)
 }
 
 func testWallet() {
 	config, err := readJSON()
 	checkError(err)
+	priv, pub := ec.ECGenerateKey()
+	fmt.Printf("Generated Keys:\n    Private: %s\n    Public: %s\n", priv, pub)
+	config.Node.FirstInit = false
+	config.Node.PrivateKey = priv
+	config.Node.PublicKey = pub
 	var node Node
-	node.firstInit(config)
-	_, pub := ec.ECGenerateKey()
+	node.init(config)
+	_, pub = ec.ECGenerateKey()
 	node.mine()
 	for i := 0; i < 2; i++ {
 		node.makeTransaction(pub, 5)

@@ -28,33 +28,9 @@ func (n *Node) init(config *JSONConfig) {
 	n.server = &NodeServer{}
 	n.server.init(n, config)
 	n.blockchain = &Blockchain{}
-	n.blockchain.init() // change to init later
+	n.blockchain.init()
 	n.transactionPool = &TransactionPool{}
 	n.transactionPool.init()
-	go n.updateChain()
-	go n.updatePeers()
-	go n.updatePool()
-	go n.periodicMine()
-	go n.periodicSave()
-	fmt.Println("The node is up!")
-	n.printBlockchain()
-}
-
-//firstInit initiates the Node for the first time, and saves to a json settings file
-func (n *Node) firstInit(conf *JSONConfig) {
-	priv, pub := ec.ECGenerateKey()
-	fmt.Printf("Generated Keys:\n    Private: %s\n    Public: %s\n", priv, pub)
-	n.privKey = priv
-	n.pubKey = pub
-	n.mutex = &sync.Mutex{}
-	n.blockchain = &Blockchain{}
-	n.transactionPool = &TransactionPool{}
-	n.server = &NodeServer{}
-	n.blockchain.firstInit()
-	n.transactionPool.init()
-	n.server.init(n, conf)
-	n.server.requestBlockchain()
-	n.server.requestPeers()
 	go n.updateChain()
 	go n.updatePeers()
 	go n.updatePool()

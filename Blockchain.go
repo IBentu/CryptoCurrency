@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path"
 	"sync"
@@ -26,15 +25,6 @@ func (bc *Blockchain) init() {
 	}
 }
 
-// firstInit initiates the blockchain at the first startup
-func (bc *Blockchain) firstInit() {
-	bc.blocks = make([]*Block, 1)
-	b := &Block{index: 0, timestamp: 0, transactions: make([]*Transaction, 0), prevHash: "", filler: big.NewInt(0)}
-	b.updateHash()
-	bc.blocks[0] = b
-	bc.mutex = &sync.Mutex{}
-}
-
 func (bc *Blockchain) saveBlockchain() error {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -43,7 +33,7 @@ func (bc *Blockchain) saveBlockchain() error {
 	errList := ""
 	bc.mutex.Lock()
 	for i := 0; i < len(bc.blocks); i++ {
-		dir = path.Join(dir, fmt.Sprintf("/Blockchain/%d.block", i))
+		dir = path.Join(dir, fmt.Sprintf("Config/Blockchain/%d.block", i))
 		data, err := bc.blocks[i].MarshalJSON()
 		if err != nil {
 			errList += string(i) + " "
@@ -71,7 +61,7 @@ func (bc *Blockchain) readBlockchain() error {
 	bc.mutex.Lock()
 	TempBC := *bc
 	for i := 0; i < len(bc.blocks); i++ {
-		dir = path.Join(dir, fmt.Sprintf("/Blockchain/%d.block", i))
+		dir = path.Join(dir, fmt.Sprintf("Config/Blockchain/%d.block", i))
 		data, err := ioutil.ReadFile(dir)
 		if err != nil {
 			break
