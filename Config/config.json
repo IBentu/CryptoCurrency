@@ -1,1 +1,9 @@
-{"Addr":"","Node":{"FirstInit":true,"PrivateKey":"84932785640371922127691339892273402007597250432378317849184002818543744766167","PublicKey":"BGQSfMUO6v8LwnuTuFnAIowI1L3e2SRvEM9lSoeerGzP7eL5pvRwB7h+r+uvTeW1V4wilxl2pqQM5up44goXcZ8="},"Peers":""}
+{
+    "Addr": "",
+    "Node": {
+        "FirstInit": true,
+        "PrivateKey": "",
+        "PublicKey": ""
+    },
+    "Peers": ""
+}
