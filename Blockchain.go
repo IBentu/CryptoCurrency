@@ -32,7 +32,7 @@ func (bc *Blockchain) saveBlockchain() error {
 	}
 	errList := ""
 	bc.mutex.Lock()
-	for i := 0; i < len(bc.blocks); i++ {
+	for i := 1; i < len(bc.blocks); i++ {
 		dir = path.Join(dir, fmt.Sprintf("Config/Blockchain/%d.block", i))
 		data, err := bc.blocks[i].MarshalJSON()
 		if err != nil {
@@ -60,7 +60,20 @@ func (bc *Blockchain) readBlockchain() error {
 	blocks := make([]*Block, 0)
 	bc.mutex.Lock()
 	TempBC := *bc
-	for i := 0; i < len(bc.blocks); i++ {
+	dir = path.Join(dir, "Config/Blockchain/0.block")
+	data, err := ioutil.ReadFile(dir)
+	if err != nil {
+		fmt.Println(errors.New("Error reading the origin block"))
+		os.Exit(1)
+	}
+	b := &Block{}
+	err = b.UnmarshalJSON(data)
+	if err != nil {
+		fmt.Println(errors.New("Error reading the origin block"))
+		os.Exit(1)
+	}
+	blocks = append(blocks, b)
+	for i := 1; i < len(bc.blocks); i++ {
 		dir = path.Join(dir, fmt.Sprintf("Config/Blockchain/%d.block", i))
 		data, err := ioutil.ReadFile(dir)
 		if err != nil {

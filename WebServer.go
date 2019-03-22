@@ -30,7 +30,7 @@ func (ws *WebServer) handlerGetBalance(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlerUI(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "wallet.html")
+	http.ServeFile(w, r, "static/wallet.html")
 }
 
 // Start initiates the webServer. run with a goroutine

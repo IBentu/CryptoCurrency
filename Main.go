@@ -5,14 +5,13 @@ import (
 	//"math/rand"
 
 	"fmt"
-	"time"
 
 	ec "github.com/IBentu/CryptoCurrency/EClib"
 )
 
 func main() {
-	runNode()
-	//testWallet()
+	//runNode()
+	testWallet()
 }
 
 func runNode() {
@@ -42,11 +41,7 @@ func testWallet() {
 	var node Node
 	node.init(config)
 	_, pub = ec.ECGenerateKey()
-	node.mine()
 	for i := 0; i < 2; i++ {
 		node.makeTransaction(pub, 5)
 	}
-	node.mine()
-	fmt.Println("done!")
-	time.Sleep(10 * time.Minute)
 }

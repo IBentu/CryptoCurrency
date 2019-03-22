@@ -55,9 +55,6 @@ func (n *Node) saveConfig() error {
 	}
 	n.mutex.Lock()
 	config.Peers += n.server.peersToString()
-	config.Node.PrivateKey = n.privKey
-	config.Node.PublicKey = n.pubKey
-	config.Addr = n.server.Address()
 	n.mutex.Unlock()
 	return writeJSON(config)
 }
@@ -109,7 +106,7 @@ func (n *Node) checkBalance(key string) int {
 	for i := 1; i < n.blockchain.Length(); i++ {
 		currBlock := n.blockchain.GetBlock(i)
 		if currBlock.miner == key {
-			sum += 50 // decide how much money to reward miners. for now 50
+			sum += 20
 		}
 		for j := 0; j < len(currBlock.transactions); j++ {
 			if currBlock.transactions[j].senderKey == key {
