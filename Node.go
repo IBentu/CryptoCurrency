@@ -31,9 +31,7 @@ func (n *Node) init(config *JSONConfig) {
 	n.blockchain.init()
 	n.transactionPool = &TransactionPool{}
 	n.transactionPool.init()
-	go n.updateChain()
-	go n.updatePeers()
-	go n.updatePool()
+	n.updateFromPeers()
 	go n.periodicMine()
 	go n.periodicSave()
 	fmt.Println("The node is up!")
@@ -43,7 +41,7 @@ func (n *Node) init(config *JSONConfig) {
 func (n *Node) printBlockchain() {
 	for {
 		time.Sleep(time.Minute)
-		fmt.Println(n.blockchain.HashString())
+		fmt.Printf("The hashes of the blockchain:\n%s\n", n.blockchain.HashString())
 	}
 }
 
@@ -54,8 +52,9 @@ func (n *Node) saveConfig() error {
 		return err
 	}
 	n.mutex.Lock()
-	config.Peers += n.server.peersToString()
+	peers := n.server.peers
 	n.mutex.Unlock()
+	n.server.savePeers(config, peers)
 	return writeJSON(config)
 }
 
@@ -137,6 +136,13 @@ func (n *Node) makeTransaction(recipient string, amount int) bool {
 	return true
 }
 
+// updateFromPeers calls all the update methods
+func (n *Node) updateFromPeers() {
+	go n.updatePool()
+	go n.updateChain()
+	go n.updatePeers()
+}
+
 // updatePool requests an update for the transactionPool from peers
 func (n *Node) updatePool() {
 	for {
@@ -161,21 +167,11 @@ func (n *Node) updateChain() {
 	}
 }
 
-// SetChainUpdate changes the status
-func (n *Node) SetChainUpdate(status bool) {
-	n.allowChainUpdate = status
-}
-
-// GetChainUpdate returns the status
-func (n *Node) GetChainUpdate() bool {
-	return n.allowChainUpdate
-}
-
 // periodicMine mines every 1 minute
 func (n *Node) periodicMine() {
 	for {
-		n.mine()
-		time.Sleep(time.Minute)
+		//n.mine()
+		time.Sleep(time.Second * 20)
 	}
 }
 
@@ -189,6 +185,6 @@ func (n *Node) periodicSave() {
 		if err2 != nil {
 			fmt.Println(err2)
 		}
-		time.Sleep(time.Minute * 5)
+		time.Sleep(time.Second * 10)
 	}
 }

@@ -6,42 +6,60 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 	"sync"
 )
 
 // Blockchain is the database for all the blocks
 type Blockchain struct {
-	blocks []*Block
-	mutex  *sync.Mutex
+	blocks   []*Block
+	mutex    *sync.Mutex
+	updating bool
+}
+
+// SetUpdating changes the update status of the blockchain
+func (bc *Blockchain) SetUpdating(status bool) {
+	bc.mutex.Lock()
+	bc.updating = status
+	bc.mutex.Unlock()
+}
+
+// IsUpdating checks if the blockchain is updating
+func (bc *Blockchain) IsUpdating() bool {
+	bc.mutex.Lock()
+	status := bc.updating
+	bc.mutex.Unlock()
+	return status
 }
 
 // init initiates the blockchain at node startup
 func (bc *Blockchain) init() {
 	bc.blocks = []*Block{}
 	bc.mutex = &sync.Mutex{}
-	err := bc.readBlockchain()
-	if err != nil {
-		fmt.Print(err)
-	}
+	bc.updating = false
+	fmt.Println(bc.readBlockchain())
 }
 
 func (bc *Blockchain) saveBlockchain() error {
-	dir, err := os.Getwd()
+	currDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 	errList := ""
+	if bc.IsUpdating() {
+		return errors.New("cannot save blockchain while it's in use")
+	}
 	bc.mutex.Lock()
 	for i := 1; i < len(bc.blocks); i++ {
-		dir = path.Join(dir, fmt.Sprintf("Config/Blockchain/%d.block", i))
+		dir := path.Join(currDir, fmt.Sprintf("Config/Blockchain/%d.block", i))
 		data, err := bc.blocks[i].MarshalJSON()
 		if err != nil {
-			errList += string(i) + " "
+			errList += strconv.Itoa(i) + " "
 			continue
 		}
 		err = ioutil.WriteFile(dir, data, 0644)
 		if err != nil {
-			errList += string(i) + " "
+			errList += strconv.Itoa(i) + " "
 			continue
 		}
 	}
@@ -53,14 +71,13 @@ func (bc *Blockchain) saveBlockchain() error {
 }
 
 func (bc *Blockchain) readBlockchain() error {
-	dir, err := os.Getwd()
+	currDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 	blocks := make([]*Block, 0)
 	bc.mutex.Lock()
-	TempBC := *bc
-	dir = path.Join(dir, "Config/Blockchain/0.block")
+	dir := path.Join(currDir, "Config/Blockchain/0.block")
 	data, err := ioutil.ReadFile(dir)
 	if err != nil {
 		fmt.Println(errors.New("Error reading the origin block"))
@@ -73,8 +90,9 @@ func (bc *Blockchain) readBlockchain() error {
 		os.Exit(1)
 	}
 	blocks = append(blocks, b)
-	for i := 1; i < len(bc.blocks); i++ {
-		dir = path.Join(dir, fmt.Sprintf("Config/Blockchain/%d.block", i))
+	i := 1
+	for ; ; i++ {
+		dir = path.Join(currDir, fmt.Sprintf("Config/Blockchain/%d.block", i))
 		data, err := ioutil.ReadFile(dir)
 		if err != nil {
 			break
@@ -86,13 +104,9 @@ func (bc *Blockchain) readBlockchain() error {
 		}
 		blocks = append(blocks, b)
 	}
-	if err != nil {
-		bc = &TempBC
-		return errors.New("Couldn't load blockchain")
-	}
 	bc.blocks = blocks
 	bc.mutex.Unlock()
-	return nil
+	return fmt.Errorf("loaded blockchain until block %d (not included)", i)
 }
 
 //verifyBlock verifies the Block is valid
@@ -245,7 +259,7 @@ func (bc *Blockchain) HashString() string {
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 	for _, b := range bc.blocks {
-		str += b.hash + " --> "
+		str += b.hash + "\n"
 	}
-	return str + "null"
+	return str
 }

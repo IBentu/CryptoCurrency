@@ -8,6 +8,36 @@ import (
 	"path"
 )
 
+// JSONPacket is a struct intended for Json encoding and decoding
+type JSONPacket struct {
+	RequestType string `json:"requestType"`
+	Data        []byte `json:"data"`
+}
+
+// MarshalJSON is an Implementation of Marshaler
+func (p *Packet) MarshalJSON() ([]byte, error) {
+	jp := JSONPacket{
+		RequestType: p.requestType,
+		Data:        p.data,
+	}
+	return json.Marshal(jp)
+}
+
+// UnmarshalJSON is an Implementation of Unmarshaler
+func (p *Packet) UnmarshalJSON(data []byte) error {
+	var jp JSONPacket
+	if err := json.Unmarshal(data, &jp); err != nil {
+		return err
+	}
+	*p = Packet{
+		requestType: jp.RequestType,
+		data:        jp.Data,
+	}
+	return nil
+}
+
+// -------------------------------------------------------------------------------
+
 // JSONTransaction is a struct intended for Json encoding and decoding
 type JSONTransaction struct {
 	SenderKey    string `json:"senderKey"`

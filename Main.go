@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-	//runNode()
-	testWallet()
+	runNode()
+	//testWallet()
 }
 
 func runNode() {

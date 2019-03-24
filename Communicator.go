@@ -26,7 +26,11 @@ func (c *Communicator) SR1(address string, p *Packet) (*Packet, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = fmt.Fprintf(conn, string(append(p.bytes(), byte('\n'))))
+	bytes, err := p.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	_, err = fmt.Fprintf(conn, string(append(bytes, '\n')))
 	if err != nil {
 		return nil, err
 	}
@@ -36,12 +40,13 @@ func (c *Communicator) SR1(address string, p *Packet) (*Packet, error) {
 		return nil, err
 	}
 	msg = msg[:len(msg)-1]
-	return ToPacket([]byte(msg)), nil
+	newP := &Packet{}
+	return newP, newP.UnmarshalJSON([]byte(msg))
 }
 
 // Listen listens for oncoming connections, recieves 1 Packet and sends one packet back
 func (c *Communicator) Listen() error {
-	//fmt.Println("Listening for nodes...")
+	fmt.Println("Listening for nodes...")
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", c.port))
 	if err != nil {
 		return err
@@ -51,19 +56,38 @@ func (c *Communicator) Listen() error {
 		if err != nil {
 			continue
 		}
-		//fmt.Println("Connected!")
+		peerAddr := conn.RemoteAddr().String()
+		fmt.Printf("Connected to %s\n", peerAddr)
 		msg, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {
 			conn.Close()
+			fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
 			continue
 		}
 		msg = msg[:len(msg)-1]
-		p := ToPacket([]byte(msg))
+		p := &Packet{}
+		err = p.UnmarshalJSON([]byte(msg))
+		if err != nil {
+			conn.Close()
+			fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
+			continue
+		}
 		c.recievedPacket <- p
 		p = <-c.answerPacket
-		conn.Write(append(p.bytes(), byte('\n')))
+		bytes, err := p.MarshalJSON()
+		if err != nil {
+			conn.Close()
+			fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
+			continue
+		}
+		_, err = fmt.Fprintf(conn, string(append(bytes, '\n')))
+		if err != nil {
+			conn.Close()
+			fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
+			continue
+		}
 		conn.Close()
-		//fmt.Println("Connection closed.")
+		fmt.Printf("Connection with %s closed\n", peerAddr)
 	}
 }
 

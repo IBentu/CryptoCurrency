@@ -29,6 +29,9 @@ func (n *NodeServer) init(node *Node, config *JSONConfig) {
 	n.peers = []string{}
 	peerStr := config.Peers
 	splat := strings.Split(peerStr, ";")
+	for i := 0; i < len(splat); i++ {
+		splat[i] = strings.TrimSpace(splat[i])
+	}
 	if len(splat) > 0 {
 		if splat[0] != "" {
 			n.peers = append(node.server.peers, splat...)
@@ -54,7 +57,7 @@ func (n *NodeServer) handlePackets() {
 		case PR:
 			retP = NewPacket(PA, FormatPA(n.peers))
 		case FT:
-			if !n.node.GetChainUpdate() {
+			if !n.node.blockchain.IsUpdating() {
 				num, err := UnformatFT(p.data)
 				if err != nil {
 					break
@@ -62,7 +65,7 @@ func (n *NodeServer) handlePackets() {
 				retP = NewPacket(BP, FormatBP(n.node.blockchain.GetBlocksFromTop(num)))
 			}
 		case IS:
-			if !n.node.GetChainUpdate() {
+			if !n.node.blockchain.IsUpdating() {
 				index, err := UnformatIS(p.data)
 				if err != nil {
 					break
@@ -80,16 +83,6 @@ func (n *NodeServer) Address() string {
 	return n.communicator.Address()
 }
 
-func (n *NodeServer) peersToString() string {
-	peers := ""
-	n.mutex.Lock()
-	for _, p := range n.peers {
-		peers += fmt.Sprintf(";%s", p)
-	}
-	n.mutex.Unlock()
-	return peers
-}
-
 func (n *NodeServer) doesPeerExist(peer string) bool {
 	for _, addr := range n.peers {
 		if peer == addr {
@@ -97,6 +90,23 @@ func (n *NodeServer) doesPeerExist(peer string) bool {
 		}
 	}
 	return false
+}
+
+func (n *NodeServer) savePeers(config *JSONConfig, peers []string) {
+	for _, peer := range peers {
+		n.savePeer(config, peer)
+	}
+}
+
+func (n *NodeServer) savePeer(config *JSONConfig, peer string) {
+	confPeers := config.Peers
+	splat := strings.Split(confPeers, ";")
+	for _, confPeer := range splat {
+		if confPeer == peer {
+			return
+		}
+	}
+	config.Peers += fmt.Sprintf(";%s", peer)
 }
 
 func (n *NodeServer) requestBlockchain() {
@@ -144,9 +154,12 @@ func (n *NodeServer) requestBlockchain() {
 			}
 			allBlocks = append(blocks, allBlocks...)
 		}
-		n.node.SetChainUpdate(true)
-		n.node.blockchain.ReplaceBlocks(allBlocks)
-		n.node.SetChainUpdate(false)
+		if !n.node.blockchain.IsUpdating() {
+			n.node.blockchain.SetUpdating(true)
+			n.node.blockchain.ReplaceBlocks(allBlocks)
+			n.node.blockchain.SetUpdating(false)
+			fmt.Printf("Updated blockchain from %s\n", peer)
+		}
 	}
 }
 
