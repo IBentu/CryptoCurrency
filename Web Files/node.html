@@ -1,0 +1,23 @@
+<html>
+    <head title="Wallet">
+        <script src="/static/functions.js"></script>
+        <script src="/static/eclib.js"></script>
+    </head>
+    Private Key: <input type="input" id="PrivateKey"></input>
+    <input type="button" onclick="copyTextBox('PrivateKey')" value="Copy"></input>
+    <br/>
+    Public Key: <input type="input" id="PublicKey"></input>
+    <input type="button" onclick="copyTextBox('PublicKey')" value="Copy"></input>
+    <br/>
+    Balance: <input type="input" id="balance" readonly="true"></input>
+    <input type="button" onclick="doCheckBalance()" value="Check Balance"></input>
+    <br/>
+    <br/>
+    Money To Send: <input type="input" id="Amount"></input>
+    <br/>
+    Recipient: <input type="input" id="Recipient"></input>
+    <br/>
+    <input type="button" onclick="makeTransaction()" value="Send"></input>
+    <br/>
+    <input type="button" onclick="mine()" value="Mine"></input>
+</html>

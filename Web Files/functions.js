@@ -52,6 +52,27 @@ function makeTransaction() {
     xhr.send(JSON.stringify(transaction));
 }
 
+function mine() {
+    var privKey = document.getElementById("PrivateKey").value;
+    var pubKey = document.getElementById("PublicKey").value;
+    var now = new Date();
+    var millis = now.getTime();
+    var hash = ec.ECHashString(pubKey + millis);
+    var signature = ec.ECSign(hash, privKey, pubKey);
+    var mineRequest = {
+        "timestamp":millis,
+        "sign":signature,
+    };
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState == XMLHttpRequest.DONE) {
+            alert(xhr.responseText)
+        }
+    }
+    var pk = document.getElementById("PublicKey").value;
+    xhr.open('POST', '/api/mineRequest', true);
+    xhr.send(JSON.stringify(mineRequest));
+}
 
 
 

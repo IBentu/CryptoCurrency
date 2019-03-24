@@ -10,7 +10,6 @@ import (
 	"hash"
 	"io"
 	"math/big"
-	"os"
 	"strings"
 
 	"github.com/gopherjs/gopherjs/js"
@@ -61,18 +60,17 @@ func ECHashString(toHash string) string {
 func ECSign(toSign string, D string, publicKey string) string {
 	var d big.Int
 	d.SetString(D, 10)
-	pkey, _ := base64.StdEncoding.DecodeString(publicKey)
+	pkey, err := base64.StdEncoding.DecodeString(publicKey)
 	toSignBytes, err := base64.StdEncoding.DecodeString(toSign)
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
+		return ""
 	}
 	x, y := elliptic.Unmarshal(elliptic.P256(), []byte(pkey))
 	privateKey := ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}, D: &d}
 	r, s, serr := ecdsa.Sign(rand.Reader, &privateKey, toSignBytes)
 	if serr != nil {
-		fmt.Println(serr)
-		os.Exit(1)
+		return ""
 	}
 
 	signature := string(r.String()) + "-" + string(s.String())
@@ -82,8 +80,14 @@ func ECSign(toSign string, D string, publicKey string) string {
 
 // ECVerify checks if a string is signed with a certain public key
 func ECVerify(toVerify string, signature string, pubkey string) bool {
-	pubkeyBytes, _ := base64.StdEncoding.DecodeString(pubkey)
+	pubkeyBytes, err := base64.StdEncoding.DecodeString(pubkey)
+	if err != nil {
+		return false
+	}
 	x, y := elliptic.Unmarshal(elliptic.P256(), pubkeyBytes)
+	if x == nil || y == nil {
+		return false
+	}
 	publicKey := ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}
 	rs := strings.Split(signature, "-")
 	if len(rs) == 2 {

@@ -32,7 +32,6 @@ func (n *Node) init(config *JSONConfig) {
 	n.transactionPool = &TransactionPool{}
 	n.transactionPool.init()
 	n.updateFromPeers()
-	go n.periodicMine()
 	go n.periodicSave()
 	fmt.Println("The node is up!")
 	n.printBlockchain()
@@ -167,14 +166,6 @@ func (n *Node) updateChain() {
 	}
 }
 
-// periodicMine mines every 1 minute
-func (n *Node) periodicMine() {
-	for {
-		//n.mine()
-		time.Sleep(time.Second * 20)
-	}
-}
-
 func (n *Node) periodicSave() {
 	for {
 		err1 := n.saveConfig()
@@ -185,6 +176,6 @@ func (n *Node) periodicSave() {
 		if err2 != nil {
 			fmt.Println(err2)
 		}
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 30)
 	}
 }

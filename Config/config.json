@@ -1,9 +1,1 @@
-{
-    "Addr": "",
-    "Node": {
-        "FirstInit": true,
-        "PrivateKey": "",
-        "PublicKey": ""
-    },
-    "Peers": ""
-}
+{"Addr":"","Node":{"FirstInit":false,"PrivateKey":"3227479131953227975053134610056775905345001351918860893536967500783077538694","PublicKey":"BJHwoRYL0QEXVb1xBBnpqZ33D4N9aLVDChj0ccvGqFJEw+VsJ0JfP3cM5NZ07HxHHOjNk9k5R9TMUo2vNc8XCuI="},"Peers":""}
