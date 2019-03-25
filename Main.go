@@ -1,9 +1,6 @@
 package main
 
 import (
-
-	//"math/rand"
-
 	"fmt"
 
 	ec "github.com/IBentu/CryptoCurrency/EClib"
