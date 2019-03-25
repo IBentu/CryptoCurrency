@@ -39,7 +39,7 @@ func (n *Node) init(config *JSONConfig) {
 
 // PrintBlockchain Prints the hashed of the blockchain
 func (n *Node) PrintBlockchain() {
-	fmt.Printf("The hashes of the blockchain:\n%s\n", n.blockchain.HashString())
+	fmt.Printf("The hashes of the blockchain:\n%s", n.blockchain.HashString())
 }
 
 // saveConfig saves the node's data in the config file

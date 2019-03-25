@@ -180,11 +180,11 @@ func (n *NodeServer) requestPeers() {
 		for _, addr := range addrs {
 			if !n.doesPeerExist(addr) && addr != n.Address() {
 				addrsToAdd = append(addrsToAdd, addr)
+				fmt.Printf("Added a peer from %s\n", peer)
 			}
 		}
 		n.mutex.Lock()
 		n.peers = append(n.peers, addrsToAdd...)
-		fmt.Printf("Updated peers from %s\n", peer)
 		n.mutex.Unlock()
 	}
 }
@@ -206,7 +206,7 @@ func (n *NodeServer) requestPool() {
 		for _, t := range trans {
 			if !n.node.transactionPool.DoesExists(t) {
 				n.node.transactionPool.addTransaction(t)
-				fmt.Printf("Updated transactions from %s\n", peer)
+				fmt.Printf("Added a transaction from %s\n", peer)
 			}
 		}
 	}
