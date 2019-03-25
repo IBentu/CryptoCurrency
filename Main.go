@@ -25,6 +25,7 @@ func runNode() {
 		checkError(err)
 	}
 	node.init(config)
+	select {}
 }
 
 func testWallet() {
