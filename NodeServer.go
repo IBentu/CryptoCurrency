@@ -40,7 +40,7 @@ func (n *NodeServer) init(node *Node, config *JSONConfig) {
 	n.webServer = &WebServer{server: n}
 	n.recvChannel = make(chan *Packet)
 	n.sendChannel = make(chan *Packet)
-	n.communicator = NewCommunicator(config.Addr, n.recvChannel, n.sendChannel, ListenPort)
+	n.communicator = NewCommunicator(n, config.Addr, n.recvChannel, n.sendChannel, ListenPort)
 	go n.communicator.Listen()
 	go n.webServer.Start()
 	go n.handlePackets()
@@ -110,6 +110,21 @@ func (n *NodeServer) savePeer(config *JSONConfig, peer string) {
 	config.Peers += fmt.Sprintf(";%s", peer)
 }
 
+func (n *NodeServer) addPeers(peers []string) {
+	for _, peer := range peers {
+		n.addPeer(peer)
+	}
+}
+
+func (n *NodeServer) addPeer(peer string) {
+	if !n.doesPeerExist(peer) && peer != n.Address() {
+		n.mutex.Lock()
+		n.peers = append(n.peers, peer)
+		fmt.Printf("%s is a new peer\n", peer)
+		n.mutex.Unlock()
+	}
+}
+
 func (n *NodeServer) requestBlockchain() {
 	for _, peer := range n.peers {
 		p := NewPacket(BR, []byte{})
@@ -176,16 +191,7 @@ func (n *NodeServer) requestPeers() {
 			continue
 		}
 		addrs := UnformatPA(p.data)
-		addrsToAdd := []string{}
-		for _, addr := range addrs {
-			if !n.doesPeerExist(addr) && addr != n.Address() {
-				addrsToAdd = append(addrsToAdd, addr)
-				fmt.Printf("Added a peer from %s\n", peer)
-			}
-		}
-		n.mutex.Lock()
-		n.peers = append(n.peers, addrsToAdd...)
-		n.mutex.Unlock()
+		n.addPeers(addrs)
 	}
 }
 
@@ -206,7 +212,7 @@ func (n *NodeServer) requestPool() {
 		for _, t := range trans {
 			if !n.node.transactionPool.DoesExists(t) {
 				n.node.transactionPool.addTransaction(t)
-				fmt.Printf("Added a transaction from %s\n", peer)
+				fmt.Printf("Added a new transaction from %s\n", peer)
 			}
 		}
 	}

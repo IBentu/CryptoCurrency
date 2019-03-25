@@ -9,6 +9,7 @@ import (
 
 //Communicator is a struct that handles the
 type Communicator struct {
+	server         *NodeServer
 	address        string
 	port           int
 	recievedPacket chan *Packet
@@ -17,8 +18,8 @@ type Communicator struct {
 }
 
 //NewCommunicator creates a new Communicator and returns it
-func NewCommunicator(address string, recievedPacket, answerPacket chan *Packet, port int) *Communicator {
-	return &Communicator{address: address, recievedPacket: recievedPacket, answerPacket: answerPacket, port: port, mutex: &sync.Mutex{}}
+func NewCommunicator(server *NodeServer, address string, recievedPacket, answerPacket chan *Packet, port int) *Communicator {
+	return &Communicator{server: server, address: address, recievedPacket: recievedPacket, answerPacket: answerPacket, port: port, mutex: &sync.Mutex{}}
 }
 
 // SR1 sends 1 Packet to address and returns the recieved packet
@@ -61,7 +62,8 @@ func (c *Communicator) Listen() error {
 		if err != nil {
 			continue
 		}
-		//peerAddr := conn.RemoteAddr().String()
+		peerAddr := conn.RemoteAddr().String()
+		c.server.addPeer(peerAddr)
 		//fmt.Printf("Connected to %s\n", peerAddr)
 		msg, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {
