@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"sync"
 )
 
 //Communicator is a struct that handles the
@@ -12,20 +13,24 @@ type Communicator struct {
 	port           int
 	recievedPacket chan *Packet
 	answerPacket   chan *Packet
+	mutex          *sync.Mutex
 }
 
 //NewCommunicator creates a new Communicator and returns it
 func NewCommunicator(address string, recievedPacket, answerPacket chan *Packet, port int) *Communicator {
-	return &Communicator{address: address, recievedPacket: recievedPacket, answerPacket: answerPacket, port: port}
+	return &Communicator{address: address, recievedPacket: recievedPacket, answerPacket: answerPacket, port: port, mutex: &sync.Mutex{}}
 }
 
 // SR1 sends 1 Packet to address and returns the recieved packet
 func (c *Communicator) SR1(address string, p *Packet) (*Packet, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	//fmt.Printf("Connecting to %s:%d...\n", address, c.port)
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", address, c.port))
 	if err != nil {
 		return nil, err
 	}
+	defer conn.Close()
 	bytes, err := p.MarshalJSON()
 	if err != nil {
 		return nil, err
@@ -56,12 +61,12 @@ func (c *Communicator) Listen() error {
 		if err != nil {
 			continue
 		}
-		peerAddr := conn.RemoteAddr().String()
-		fmt.Printf("Connected to %s\n", peerAddr)
+		//peerAddr := conn.RemoteAddr().String()
+		//fmt.Printf("Connected to %s\n", peerAddr)
 		msg, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {
 			conn.Close()
-			fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
+			//fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
 			continue
 		}
 		msg = msg[:len(msg)-1]
@@ -69,7 +74,7 @@ func (c *Communicator) Listen() error {
 		err = p.UnmarshalJSON([]byte(msg))
 		if err != nil {
 			conn.Close()
-			fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
+			//fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
 			continue
 		}
 		c.recievedPacket <- p
@@ -77,17 +82,17 @@ func (c *Communicator) Listen() error {
 		bytes, err := p.MarshalJSON()
 		if err != nil {
 			conn.Close()
-			fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
+			//fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
 			continue
 		}
 		_, err = fmt.Fprintf(conn, string(append(bytes, '\n')))
 		if err != nil {
 			conn.Close()
-			fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
+			//fmt.Printf("Connection with %s closed due to error:\n	%s\n", peerAddr, err)
 			continue
 		}
 		conn.Close()
-		fmt.Printf("Connection with %s closed\n", peerAddr)
+		//fmt.Printf("Connection with %s closed\n", peerAddr)
 	}
 }
 

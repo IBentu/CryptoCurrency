@@ -34,14 +34,12 @@ func (n *Node) init(config *JSONConfig) {
 	n.updateFromPeers()
 	go n.periodicSave()
 	fmt.Println("The node is up!")
-	n.printBlockchain()
+	n.PrintBlockchain()
 }
 
-func (n *Node) printBlockchain() {
-	for {
-		time.Sleep(time.Minute)
-		fmt.Printf("The hashes of the blockchain:\n%s\n", n.blockchain.HashString())
-	}
+// PrintBlockchain Prints the hashed of the blockchain
+func (n *Node) PrintBlockchain() {
+	fmt.Printf("The hashes of the blockchain:\n%s\n", n.blockchain.HashString())
 }
 
 // saveConfig saves the node's data in the config file
@@ -93,6 +91,7 @@ func (n *Node) mine() bool {
 				return false
 			}
 			n.blockchain.AddBlock(&block)
+			n.PrintBlockchain()
 			return true
 		}
 	}

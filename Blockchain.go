@@ -106,7 +106,10 @@ func (bc *Blockchain) readBlockchain() error {
 	}
 	bc.blocks = blocks
 	bc.mutex.Unlock()
-	return fmt.Errorf("loaded blockchain until block %d (not included)", i)
+	if i == 1 {
+		return errors.New("loaded the origin of the blockchain")
+	}
+	return fmt.Errorf("loaded blockchain from the origin to index %d", i-1)
 }
 
 //verifyBlock verifies the Block is valid

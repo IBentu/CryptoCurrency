@@ -43,6 +43,7 @@ func (n *NodeServer) init(node *Node, config *JSONConfig) {
 	n.communicator = NewCommunicator(config.Addr, n.recvChannel, n.sendChannel, ListenPort)
 	go n.communicator.Listen()
 	go n.webServer.Start()
+	go n.handlePackets()
 }
 
 func (n *NodeServer) handlePackets() {
@@ -159,6 +160,7 @@ func (n *NodeServer) requestBlockchain() {
 			n.node.blockchain.ReplaceBlocks(allBlocks)
 			n.node.blockchain.SetUpdating(false)
 			fmt.Printf("Updated blockchain from %s\n", peer)
+			n.node.PrintBlockchain()
 		}
 	}
 }
@@ -176,12 +178,13 @@ func (n *NodeServer) requestPeers() {
 		addrs := UnformatPA(p.data)
 		addrsToAdd := []string{}
 		for _, addr := range addrs {
-			if !n.doesPeerExist(addr) {
+			if !n.doesPeerExist(addr) && addr != n.Address() {
 				addrsToAdd = append(addrsToAdd, addr)
 			}
 		}
 		n.mutex.Lock()
 		n.peers = append(n.peers, addrsToAdd...)
+		fmt.Printf("Updated peers from %s\n", peer)
 		n.mutex.Unlock()
 	}
 }
@@ -203,6 +206,7 @@ func (n *NodeServer) requestPool() {
 		for _, t := range trans {
 			if !n.node.transactionPool.DoesExists(t) {
 				n.node.transactionPool.addTransaction(t)
+				fmt.Printf("Updated transactions from %s\n", peer)
 			}
 		}
 	}

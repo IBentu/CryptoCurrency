@@ -70,6 +70,7 @@ func ECSign(toSign string, D string, publicKey string) string {
 	privateKey := ecdsa.PrivateKey{PublicKey: ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}, D: &d}
 	r, s, serr := ecdsa.Sign(rand.Reader, &privateKey, toSignBytes)
 	if serr != nil {
+		fmt.Println(serr)
 		return ""
 	}
 

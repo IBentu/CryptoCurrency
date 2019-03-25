@@ -37,7 +37,7 @@ func (ws *WebServer) handlerMine(w http.ResponseWriter, r *http.Request) {
 		hash := ec.ECHashString(fmt.Sprintf("%s%d", ws.server.node.pubKey, mineReq.Timestamp))
 		if ec.ECVerify(hash, mineReq.Sign, ws.server.node.pubKey) {
 			if ws.server.node.mine() {
-				w.Write([]byte("Mined Seccessfully."))
+				w.Write([]byte("Mined Successfully."))
 			} else {
 				w.Write([]byte("Could not mine."))
 			}
