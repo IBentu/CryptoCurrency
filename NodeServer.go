@@ -23,6 +23,7 @@ const (
 	ListenPort = 4416
 )
 
+// init initiates the NodeServer and runs the listener of the WebServer and the Communicator
 func (n *NodeServer) init(node *Node, config *JSONConfig) {
 	n.node = node
 	n.mutex = &sync.Mutex{}
@@ -46,6 +47,8 @@ func (n *NodeServer) init(node *Node, config *JSONConfig) {
 	go n.handlePackets()
 }
 
+// handlePackets recieves a packet through the recieve channel and returns a packet through the send
+// channel that complies with the request
 func (n *NodeServer) handlePackets() {
 	for {
 		p := <-n.recvChannel
@@ -84,6 +87,7 @@ func (n *NodeServer) Address() string {
 	return n.communicator.Address()
 }
 
+// doesPeerExist checks if the recieved peer is already in the NodeServer peers
 func (n *NodeServer) doesPeerExist(peer string) bool {
 	for _, addr := range n.peers {
 		if peer == addr {
@@ -93,12 +97,15 @@ func (n *NodeServer) doesPeerExist(peer string) bool {
 	return false
 }
 
+// savePeers recieves an array of peers (strings) and a JSONConfig and calls savePeer with each
+// of the peers
 func (n *NodeServer) savePeers(config *JSONConfig, peers []string) {
 	for _, peer := range peers {
 		n.savePeer(config, peer)
 	}
 }
 
+// savePeer recieves a peer (string) and a JSONConfig and adds the peer if it doesn't exist in the config already
 func (n *NodeServer) savePeer(config *JSONConfig, peer string) {
 	confPeers := config.Peers
 	splat := strings.Split(confPeers, ";")
@@ -110,25 +117,25 @@ func (n *NodeServer) savePeer(config *JSONConfig, peer string) {
 	config.Peers += fmt.Sprintf(";%s", peer)
 }
 
+// addPeers calls add peer with each of the recieved peers
 func (n *NodeServer) addPeers(peers []string) {
 	for _, peer := range peers {
 		n.addPeer(peer)
 	}
 }
 
+// addPeer adds the recieved peer to the node of if the peer doesn't already exist and it isn't the address
+// of the current node
 func (n *NodeServer) addPeer(peer string) {
-	peerSplat := strings.Split(peer, ":")
-	if len(peerSplat) == 2 {
-		peer = peerSplat[0]
-		if !n.doesPeerExist(peer) && peer != n.Address() {
-			n.mutex.Lock()
-			n.peers = append(n.peers, peer)
-			fmt.Printf("%s is a new peer\n", peer)
-			n.mutex.Unlock()
-		}
+	if !n.doesPeerExist(peer) && peer != n.Address() {
+		n.mutex.Lock()
+		n.peers = append(n.peers, peer)
+		fmt.Printf("%s is a new peer\n", peer)
+		n.mutex.Unlock()
 	}
 }
 
+// requestBlockchain send a request for the blockchain to every the node knows
 func (n *NodeServer) requestBlockchain() {
 	for _, peer := range n.peers {
 		p := NewPacket(BR, []byte{})
@@ -184,6 +191,7 @@ func (n *NodeServer) requestBlockchain() {
 	}
 }
 
+// requestPeers sends a request for the peers to every peer the node knows
 func (n *NodeServer) requestPeers() {
 	for _, peer := range n.peers {
 		p := NewPacket(PR, []byte{})
@@ -199,6 +207,7 @@ func (n *NodeServer) requestPeers() {
 	}
 }
 
+// requestPool sends a request for the Transaction pool to every peer the node knows
 func (n *NodeServer) requestPool() {
 	for _, peer := range n.peers {
 		p := NewPacket(TPR, []byte{})

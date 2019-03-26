@@ -11,6 +11,7 @@ func main() {
 	//testWallet()
 }
 
+// runNode runs the initiates the node and runs it
 func runNode() {
 	config, err := readJSON()
 	checkError(err)
@@ -28,6 +29,7 @@ func runNode() {
 	select {}
 }
 
+// testWallet is a test for the webServer and the html wallet
 func testWallet() {
 	config, err := readJSON()
 	checkError(err)

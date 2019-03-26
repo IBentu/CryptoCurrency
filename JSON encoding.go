@@ -148,6 +148,7 @@ type JSONConfig struct {
 	Peers string
 }
 
+// readJSON read the config.json file from /Config/ and returns it as a JSONConfig
 func readJSON() (*JSONConfig, error) {
 	dir, err := os.Getwd()
 	checkError(err)
@@ -164,6 +165,7 @@ func readJSON() (*JSONConfig, error) {
 	return &config, err
 }
 
+// writeJSON writes a JSONConfig into the config.json file in /Config/
 func writeJSON(config *JSONConfig) error {
 	data, err := json.Marshal(config)
 	if err != nil {

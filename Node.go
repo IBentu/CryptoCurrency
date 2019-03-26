@@ -116,7 +116,7 @@ func (n *Node) checkBalance(key string) int {
 	return sum
 }
 
-// makeTransaction create a trnsaction adds it to the pool and returns true if transaction is legal,
+// makeTransaction create a transaction adds it to the pool and returns true if transaction is legal,
 // otherwise it returns false
 func (n *Node) makeTransaction(recipient string, amount int) bool {
 	var t Transaction
@@ -165,12 +165,13 @@ func (n *Node) updateChain() {
 	}
 }
 
+// periodicSave saves the blockchain and the config every 30 seconds
 func (n *Node) periodicSave() {
 	for {
 		err1 := n.saveConfig()
 		err2 := n.blockchain.saveBlockchain()
 		if err1 != nil {
-			fmt.Printf("could not save config\n%s\n", err1)
+			fmt.Printf("could not save config, error:\n	%s\n", err1)
 		}
 		if err2 != nil {
 			fmt.Println(err2)

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 )
 
@@ -63,7 +64,10 @@ func (c *Communicator) Listen() error {
 			continue
 		}
 		peerAddr := conn.RemoteAddr().String()
-		c.server.addPeer(peerAddr)
+		peerSplat := strings.Split(peerAddr, ":")
+		if len(peerSplat) == 2 {
+			c.server.addPeer(peerSplat[0])
+		}
 		//fmt.Printf("Connected to %s\n", peerAddr)
 		msg, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {

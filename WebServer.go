@@ -15,6 +15,8 @@ type WebServer struct {
 	server *NodeServer
 }
 
+// handlerSendTransaction gets the transaction of the web client, verifies it and add
+// it to the transaction pool if it's ok
 func (ws *WebServer) handlerSendTransaction(w http.ResponseWriter, r *http.Request) {
 	body, err1 := ioutil.ReadAll(r.Body)
 	trx, err2 := UnformatTransaction(body)
@@ -26,6 +28,8 @@ func (ws *WebServer) handlerSendTransaction(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// handlerMine gets the mine request from the web client, verifies the signature
+// and mine a block
 func (ws *WebServer) handlerMine(w http.ResponseWriter, r *http.Request) {
 	body, err1 := ioutil.ReadAll(r.Body)
 	mineReq := &struct {
@@ -49,24 +53,30 @@ func (ws *WebServer) handlerMine(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handlerGetBalance gets the public key from the web client checks the balance and sends the
+// balance back
 func (ws *WebServer) handlerGetBalance(w http.ResponseWriter, r *http.Request) {
 	pk := r.URL.Query().Get("pk")
 	bal := ws.server.node.checkBalance(pk)
 	w.Write([]byte(strconv.Itoa(bal)))
 }
 
+// handlerWallet sends the wallet.html file to the web client
 func handlerWallet(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "Web Files/wallet.html")
 }
 
+// handlerNode sends the node.html file to the web client
 func handlerNode(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "Web Files/node.html")
 }
 
+// handlerFunctions sends the functions.js file to the web client
 func handlerFunctions(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "Web Files/functions.js")
 }
 
+// handlerEclib sends the eclib.js file to the web client
 func handlerEclib(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "Web Files/eclib.js")
 }

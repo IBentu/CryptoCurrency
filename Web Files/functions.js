@@ -1,4 +1,8 @@
 function doCheckBalance() {
+    /* 
+    doCheckBalance sends a request for the balance to the node and changes the balance
+    text box to the updates balance
+    */
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState == XMLHttpRequest.DONE) {
@@ -12,6 +16,9 @@ function doCheckBalance() {
 }
 
 function genKey() {
+    /*
+    genKey generates a new key pair and changes the text boxes tto the generated pair
+    */
     var key = ec.ECGenerateKey();
     var box = document.getElementById("PrivateKey");
     box.value = key[0]
@@ -20,6 +27,9 @@ function genKey() {
 }
 
 function makeTransaction() {
+    /*
+    makeTransaction sends a transaction to the node based of the values in the texts boxes
+    */
     var recp = document.getElementById("Recipient").value;
     var amount = document.getElementById("Amount").value;
     var privKey = document.getElementById("PrivateKey").value;
@@ -53,6 +63,9 @@ function makeTransaction() {
 }
 
 function mine() {
+    /*
+    mine sends a mine request to the node
+    */
     var privKey = document.getElementById("PrivateKey").value;
     var pubKey = document.getElementById("PublicKey").value;
     var now = new Date();
@@ -77,6 +90,9 @@ function mine() {
 
 
 function copyTextBox(boxId) {
+    /*
+    copyTextBox copies the text in a text box to the clipboard based on the id of the box
+    */
     var copyText = document.getElementById(boxId);
     copyText.select();
     document.execCommand("copy");

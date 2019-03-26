@@ -40,6 +40,7 @@ func (bc *Blockchain) init() {
 	fmt.Println(bc.readBlockchain())
 }
 
+// saveBlockchain saves the blockchain in /Config/Blockchain/ in the format of <block index>.block
 func (bc *Blockchain) saveBlockchain() error {
 	currDir, err := os.Getwd()
 	if err != nil {
@@ -70,6 +71,7 @@ func (bc *Blockchain) saveBlockchain() error {
 	return nil
 }
 
+// readBlockchain reads the blockchain from /Config/Blockchain/ and adds it to the node
 func (bc *Blockchain) readBlockchain() error {
 	currDir, err := os.Getwd()
 	if err != nil {
