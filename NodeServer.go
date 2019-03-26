@@ -117,11 +117,15 @@ func (n *NodeServer) addPeers(peers []string) {
 }
 
 func (n *NodeServer) addPeer(peer string) {
-	if !n.doesPeerExist(peer) && peer != n.Address() {
-		n.mutex.Lock()
-		n.peers = append(n.peers, peer)
-		fmt.Printf("%s is a new peer\n", peer)
-		n.mutex.Unlock()
+	peerSplat := strings.Split(peer, ":")
+	if len(peerSplat) == 2 {
+		peer = peerSplat[0]
+		if !n.doesPeerExist(peer) && peer != n.Address() {
+			n.mutex.Lock()
+			n.peers = append(n.peers, peer)
+			fmt.Printf("%s is a new peer\n", peer)
+			n.mutex.Unlock()
+		}
 	}
 }
 
