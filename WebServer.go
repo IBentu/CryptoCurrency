@@ -81,10 +81,16 @@ func handlerEclib(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "Web Files/eclib.js")
 }
 
+// handlerStyles sends the styles.css file to the web client
+func handlerStyles(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "Web Files/styles.css")
+}
+
 // Start initiates the webServer. run with a goroutine
 func (ws *WebServer) Start() {
 	http.HandleFunc("/static/functions.js", handlerFunctions)
 	http.HandleFunc("/static/eclib.js", handlerEclib)
+	http.HandleFunc("/static/styles.css", handlerStyles)
 	http.HandleFunc("/wallet", handlerWallet)
 	http.HandleFunc("/node", handlerNode)
 	http.HandleFunc("/api/sendTransaction", ws.handlerSendTransaction)
