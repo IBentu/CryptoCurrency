@@ -6,8 +6,13 @@ function doCheckBalance() {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState == XMLHttpRequest.DONE) {
-            var blc = document.getElementById("balance");
-            blc.value = xhr.responseText
+            var resp = xhr.response
+            if(!isNaN(resp)) {
+                var blc = document.getElementById("balance");
+                blc.value = xhr.responseText
+            } else {
+                alert(resp)
+            }
         }
     }
     var pk = document.getElementById("PublicKey").value;

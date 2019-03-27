@@ -57,8 +57,14 @@ func (ws *WebServer) handlerMine(w http.ResponseWriter, r *http.Request) {
 // balance back
 func (ws *WebServer) handlerGetBalance(w http.ResponseWriter, r *http.Request) {
 	pk := r.URL.Query().Get("pk")
-	bal := ws.server.node.checkBalance(pk)
-	w.Write([]byte(strconv.Itoa(bal)))
+	if len(pk) > 0 {
+		if pk[len(pk)-1] == byte('=') && len(pk) == 88 {
+			bal := ws.server.node.checkBalance(pk)
+			w.Write([]byte(strconv.Itoa(bal)))
+			return
+		}
+	}
+	w.Write([]byte("Invalid Public Key"))
 }
 
 // handlerWallet sends the wallet.html file to the web client
