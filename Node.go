@@ -20,6 +20,17 @@ type Node struct {
 	allowChainUpdate bool
 }
 
+const (
+
+	// UpdateInterval is the update time interval (in seconds)
+	// of the blockchain, peers and transactions
+	UpdateInterval = 15
+
+	// SaveInterval is the save time interval (in seconds)
+	// of the blockchain and peers
+	SaveInterval = 20
+)
+
 // init initiates the Node by loading a json settings file
 func (n *Node) init(config *JSONConfig) {
 	n.mutex = &sync.Mutex{}
@@ -31,7 +42,7 @@ func (n *Node) init(config *JSONConfig) {
 	n.blockchain.init()
 	n.transactionPool = &TransactionPool{}
 	n.transactionPool.init()
-	n.updateFromPeers()
+	go n.updateFromPeers()
 	go n.periodicSave()
 	fmt.Println("The node is up!")
 	n.PrintBlockchain()
@@ -134,35 +145,27 @@ func (n *Node) makeTransaction(recipient string, amount int) bool {
 	return true
 }
 
-// updateFromPeers calls all the update methods
+// updateFromPeers updates the blockchain, peers and transactions from
+// the peer-nodes. run with a goroutine
 func (n *Node) updateFromPeers() {
-	go n.updatePool()
-	go n.updateChain()
-	go n.updatePeers()
-}
-
-// updatePool requests an update for the transactionPool from peers
-func (n *Node) updatePool() {
-	for {
-		n.server.requestPool()
-		time.Sleep(time.Minute)
-	}
-}
-
-// updatePeers requests an update for the transactionPool from peers
-func (n *Node) updatePeers() {
-	for {
-		n.server.requestPeers()
-		time.Sleep(time.Minute)
-	}
-}
-
-// updateChain requests an update for the blockchain from peers
-func (n *Node) updateChain() {
-	for {
-		n.server.requestBlockchain()
-		time.Sleep(time.Minute)
-	}
+	go func() {
+		for {
+			n.server.requestBlockchain()
+			time.Sleep(time.Second * UpdateInterval)
+		}
+	}()
+	go func() {
+		for {
+			n.server.requestPeers()
+			time.Sleep(time.Second * UpdateInterval)
+		}
+	}()
+	go func() {
+		for {
+			n.server.requestPool()
+			time.Sleep(time.Second * UpdateInterval)
+		}
+	}()
 }
 
 // periodicSave saves the blockchain and the config every 30 seconds
@@ -176,6 +179,6 @@ func (n *Node) periodicSave() {
 		if err2 != nil {
 			fmt.Println(err2)
 		}
-		time.Sleep(time.Second * 30)
+		time.Sleep(time.Second * SaveInterval)
 	}
 }
