@@ -86,15 +86,4 @@ function mine() {
     xhr.open('POST', '/api/mineRequest', true);
     xhr.send(JSON.stringify(mineRequest));
 }
-
-
-
-function copyTextBox(boxId) {
-    /*
-    copyTextBox copies the text in a text box to the clipboard based on the id of the box
-    */
-    var copyText = document.getElementById(boxId);
-    copyText.select();
-    document.execCommand("copy");
-  }
   

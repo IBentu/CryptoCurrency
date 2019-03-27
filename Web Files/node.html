@@ -6,19 +6,40 @@
     </head>
     <body>
         <h1>Node</h1>
-        Private Key: <input type="input" class="key" id="PrivateKey" placeholder="Your private key"></input>
-        <input type="button" class="button" onclick="copyTextBox('PrivateKey')" value="Copy"></input>
-        <br/>
-        Public Key: <input type="input" class="key" id="PublicKey" placeholder="Your public key"></input>
-        <input type="button" class="button" onclick="copyTextBox('PublicKey')" value="Copy"></input>
-        <br/>
-        Balance: <input type="input" id="balance" readonly="true"></input>
-        <input type="button" class="button" onclick="doCheckBalance()" value="Check Balance"></input>
-        <br/>
-        Recipient: <input type="input" id="Recipient" placeholder="Public key of the recipient"></input>
-        Money To Send: <input type="input" id="Amount" placeholder="Amount"></input>
-        <input type="button" class="button" onclick="makeTransaction()" value="Make transaction"></input>
-        <br/>
-        <input type="button" class="button" onclick="mine()" value="Mine"></input>
+        <div class="keys-form">
+                <div class="form">
+                    <input type="text" id="PrivateKey" class="formText" size="long" required>
+                    <label class="label" for="PrivateKey">Private Key</label>
+                </div>
+                <div class="form">
+                    <input type="text" id="PublicKey" class="formText" size="long" required>
+                    <label class="label" for="PublicKey">Public Key</label>
+                </div>
+            </div>
+            <div>
+                <label for="balance">Balance:</label>
+                <input type="text" id="balance" readonly="true"></input>
+                <input type="button" class="button" onclick="doCheckBalance()" value="Check Balance"></input>
+            </div>
+            <br/>
+            <div class="send-money-form">
+                <label for="send-money-form">Send Money:</label>
+                <br/>
+                <br/>
+                <div class="form">
+                    <input type="text" id="Recipient" class="formText" size="long" required></input>
+                    <label class="label" for="Recipient">Recipient</label>
+                </div>
+                <div class="form">
+                    <input type="text" id="Amount" class="formText" required></input>
+                    <label class="label" for="Amount">Amount</label>
+                </div>
+                <input type="button" class="button" onclick="makeTransaction()" value="Make transaction"></input>
+            </div>
+            <br/>
+            <br/>
+            <div>
+                <input type="button" class="button" onclick="mine()" value="Mine"></input>
+            </div>
     </body>
 </html>
