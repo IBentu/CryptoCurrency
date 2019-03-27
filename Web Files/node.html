@@ -18,7 +18,7 @@
             </div>
             <div>
                 <label for="balance">Balance:</label>
-                <input type="text" id="balance" readonly="true"></input>
+                <input type="text" id="balance" readonly="true" size="short"></input>
                 <input type="button" class="button" onclick="doCheckBalance()" value="Check Balance"></input>
             </div>
             <br/>
@@ -31,7 +31,7 @@
                     <label class="label" for="Recipient">Recipient</label>
                 </div>
                 <div class="form">
-                    <input type="text" id="Amount" class="formText" required></input>
+                    <input type="text" id="Amount" class="formText" size="short" required></input>
                     <label class="label" for="Amount">Amount</label>
                 </div>
                 <input type="button" class="button" onclick="makeTransaction()" value="Make transaction"></input>

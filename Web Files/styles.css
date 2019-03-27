@@ -68,6 +68,11 @@ input[size=long] {
   width: 750px;
 }
 
+
+input[size=short] {
+  width: 70px;
+}
+
 .send-money-form {
   display: inline-table;
 }
