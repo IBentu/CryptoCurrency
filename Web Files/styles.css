@@ -37,21 +37,12 @@ input[type=text] {
   margin-bottom: 1.5rem;
 }
 
-.keys-label {
-  display: block;
-  position: absolute;
-  top: 0;
-  padding: 7px 0 0 5px;
-  transition: all 200ms;
-  opacity: 0.5;
-}
-
 
 .label{
   display: block;
   position: absolute;
   top: 0;
-  padding: 0 0 0 5px;
+  padding: 0 0 0 4px;
   transition: all 200ms;
   opacity: 0.5;
 }
