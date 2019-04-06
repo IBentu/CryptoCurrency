@@ -42,7 +42,7 @@ func (n *Node) init(config *JSONConfig) {
 	n.blockchain.init()
 	n.transactionPool = &TransactionPool{}
 	n.transactionPool.init()
-	go n.updateFromPeers()
+	n.updateFromPeers()
 	go n.periodicSave()
 	fmt.Println("The node is up!")
 	n.PrintBlockchain()
@@ -146,7 +146,7 @@ func (n *Node) makeTransaction(recipient string, amount int) bool {
 }
 
 // updateFromPeers updates the blockchain, peers and transactions from
-// the peer-nodes. run with a goroutine
+// the peer-nodes.
 func (n *Node) updateFromPeers() {
 	go func() {
 		for {
