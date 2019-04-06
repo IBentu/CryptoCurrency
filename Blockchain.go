@@ -114,18 +114,6 @@ func (bc *Blockchain) readBlockchain() error {
 	return fmt.Errorf("loaded blockchain from the origin to index %d", i-1)
 }
 
-//verifyBlock verifies the Block is valid
-func (bc *Blockchain) verifyBlock(b Block) bool {
-	switch {
-	case b.prevHash != bc.blocks[len(bc.blocks)-1].hash:
-		return false
-	case !b.verifyPOW():
-		return false
-	default:
-		return true
-	}
-}
-
 // GetLatestIndex returns the indexes of the latests block
 func (bc *Blockchain) GetLatestIndex() int {
 	bc.mutex.Lock()
