@@ -11,13 +11,12 @@ import (
 
 // Node is the client for miners
 type Node struct {
-	privKey          string
-	pubKey           string
-	blockchain       *Blockchain
-	transactionPool  *TransactionPool
-	server           *NodeServer
-	mutex            *sync.Mutex
-	allowChainUpdate bool
+	privKey         string
+	pubKey          string
+	blockchain      *Blockchain
+	transactionPool *TransactionPool
+	server          *NodeServer
+	mutex           *sync.Mutex
 }
 
 const (
