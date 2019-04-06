@@ -20,7 +20,7 @@ type NodeServer struct {
 const (
 
 	// ListenPort is the port on which the Server is listening to
-	ListenPort = 4416
+	ListenPort = 4415
 )
 
 // init initiates the NodeServer and runs the listener of the WebServer and the Communicator
