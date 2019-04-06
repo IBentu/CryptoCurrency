@@ -18,7 +18,7 @@ func (t *Transaction) toHashString() string {
 }
 
 //transactionSliceToByteSlice returns a string that can be hashed
-func transactionSliceToString(transactions []*Transaction) string {
+func transactionSliceToHashString(transactions []*Transaction) string {
 	str := ""
 	for i := 0; i < len(transactions); i++ {
 		str += transactions[i].toHashString()
