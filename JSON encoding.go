@@ -88,7 +88,7 @@ type JSONBlock struct {
 	Miner        string         `json:"miner"`
 	Hash         string         `json:"hash"`
 	PrevHash     string         `json:"prevHash"`
-	Filler       *big.Int       `json:"filler"`
+	Nuance       *big.Int       `json:"nuance"`
 }
 
 // MarshalJSON is an Implementation of Marshaler
@@ -100,7 +100,7 @@ func (b *Block) MarshalJSON() ([]byte, error) {
 		Miner:        b.miner,
 		Hash:         b.hash,
 		PrevHash:     b.prevHash,
-		Filler:       b.filler,
+		Nuance:       b.nuance,
 	}
 	return json.Marshal(jb)
 }
@@ -118,7 +118,7 @@ func (b *Block) UnmarshalJSON(data []byte) error {
 		miner:        jb.Miner,
 		hash:         jb.Hash,
 		prevHash:     jb.PrevHash,
-		filler:       jb.Filler,
+		nuance:       jb.Nuance,
 	}
 	return nil
 }

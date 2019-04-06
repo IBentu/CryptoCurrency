@@ -93,7 +93,7 @@ func (n *Node) mine() bool {
 	block.prevHash = n.blockchain.GetLatestHash()
 	var counter int64
 	for {
-		block.filler = big.NewInt(counter)
+		block.nuance = big.NewInt(counter)
 		counter++
 		block.updateHash()
 		if block.verifyPOW() {

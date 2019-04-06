@@ -14,7 +14,7 @@ type Block struct {
 	miner        string
 	transactions []*Transaction
 	prevHash     string
-	filler       *big.Int
+	nuance       *big.Int
 	hash         string
 }
 
@@ -22,7 +22,7 @@ type Block struct {
 func (b *Block) updateHash() {
 	hash := sha256.New()
 	data := fmt.Sprintf("%d%d%s%s%s%d", b.index, b.timestamp, b.miner,
-		transactionSliceToString(b.transactions), b.prevHash, b.filler)
+		transactionSliceToString(b.transactions), b.prevHash, b.nuance)
 	hash.Write([]byte(data))
 	hashChecksum := hash.Sum(nil)
 	b.hash = hex.EncodeToString(hashChecksum)
